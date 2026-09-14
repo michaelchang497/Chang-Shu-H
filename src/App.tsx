@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import logoFull from './assets/logo-full.jpg';
+import logoFull from './assets/logo-full.png';
 import { mockPatients } from './data/patientData';
 import { EDUCATION_TOPICS, EducationTopicId } from './data/educationTopics';
 import { evaluateLab } from './lib/labReference';
@@ -149,7 +149,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand-block">
           <span className="brand-logo-badge">
-            <img src={logoFull} alt="秀傳醫療社團法人秀傳紀念醫院" />
+            <img src={logoFull} alt="彰化秀傳紀念醫院" />
           </span>
           <div className="subbrand">AI 智慧個人化衛教與臨床營養照護平台</div>
         </div>
