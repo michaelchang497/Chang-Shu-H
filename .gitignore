@@ -1,0 +1,12 @@
+node_modules
+dist
+tsconfig.tsbuildinfo
+.DS_Store
+.env
+.env.*
+
+# legacy bundled artifact, superseded by src/
+Chang-Shu-H-main/
+
+# internal hospital reference docs — do not publish to a public repo
+reference/
