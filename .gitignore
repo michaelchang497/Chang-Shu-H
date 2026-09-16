@@ -5,8 +5,9 @@ tsconfig.tsbuildinfo
 .env
 .env.*
 
-# legacy bundled artifact, superseded by src/
-Chang-Shu-H-main/
+# legacy bundled artifact — index.html is now the deployed site (has 個管+營養部, src/ does not yet)
+Chang-Shu-H-main/*
+!Chang-Shu-H-main/index.html
 
 # internal hospital reference docs — do not publish to a public repo
 reference/
