@@ -253,7 +253,7 @@ export default function App() {
                     臨床指標趨勢報告 <span className="range-badge">{dateRangeLabel}</span>
                   </div>
                   <div className="section-sub">
-                    模擬讀取自彰秀內部 HIS 各項目檢驗曲線（最新一期為：{current?.date}）
+                    讀取自彰秀內部 HIS 各項目檢驗曲線（最新一期為：{current?.date}）
                   </div>
                 </div>
                 <div className="section-header-right">
