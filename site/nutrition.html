@@ -385,6 +385,36 @@ body.flyer-only .paper{background:none;border:none;padding:0}
   .fsec{padding:12px 14px}.fh,.fhero,.ff{padding-left:14px;padding-right:14px}
 }
 
+/* ---------- AI 判讀動畫 ---------- */
+.aiwork{border:1px solid var(--te200);background:linear-gradient(135deg,#f0fdfa,#ecfdf5 60%,#fff);border-radius:12px;padding:14px 16px;margin-bottom:14px;box-shadow:0 4px 14px -6px rgba(13,148,136,.25);animation:awIn .35s ease both}
+@keyframes awIn{from{opacity:0;transform:translateY(-6px)}}
+.aw-h{display:flex;align-items:center;gap:10px}
+.aw-h b{display:block;font-size:13px;color:var(--te800)}
+.aw-t{font-size:11px;color:var(--te700)}
+.aw-h .pend{margin-left:auto}
+.aw-orb{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;background:conic-gradient(from 0deg,var(--te600),var(--em400),#818cf8,var(--te600));animation:spinOrb 1.6s linear infinite;flex:none}
+.aw-orb svg{animation:spinOrb 1.6s linear infinite reverse}
+.aiwork.done .aw-orb{animation:none;background:var(--em600)}.aiwork.done .aw-orb svg{animation:none}
+@keyframes spinOrb{to{transform:rotate(360deg)}}
+.aw-bar{height:4px;border-radius:99px;background:var(--te100);margin:12px 0 10px;overflow:hidden}
+.aw-bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--te600),var(--em400),var(--te600));background-size:200% 100%;animation:shimmer 1.2s linear infinite;transition:width .45s ease}
+@keyframes shimmer{to{background-position:-200% 0}}
+.aw-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.aw-steps li{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--s400);opacity:.45;transition:.25s}
+.aw-steps li.run,.aw-steps li.ok{opacity:1;color:var(--s700)}
+.aw-steps li b{font-weight:600}
+.aw-steps li small{display:block;font-size:11px;color:var(--te700);animation:awIn .3s ease both}
+.aw-steps li small:empty{display:none}
+.aw-s{width:16px;height:16px;border-radius:50%;border:2px solid var(--s300);flex:none;margin-top:1px;position:relative}
+.aw-steps li.run .aw-s{border-color:var(--te200);border-top-color:var(--te600);animation:spinOrb .7s linear infinite}
+.aw-steps li.ok .aw-s{border-color:var(--em600);background:var(--em600)}
+.aw-steps li.ok .aw-s::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:7px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.fld.dim{opacity:.45;transition:.2s}
+textarea.typing{border-color:var(--te600)!important;box-shadow:0 0 0 3px rgba(13,148,136,.15);caret-color:transparent;background:#fff}
+.flyer.reveal .fh,.flyer.reveal .fhero,.flyer.reveal .fsec,.flyer.reveal .pc,.flyer.reveal .ff{animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+@media (prefers-reduced-motion:reduce){.aiwork,.aw-orb,.aw-orb svg,.aw-bar i,.flyer.reveal *{animation:none!important}}
+
 @media (max-width:1100px){.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:1024px){.wrap{grid-template-columns:1fr}}
 @media (max-width:760px){
@@ -608,14 +638,18 @@ function derive(c, st){
   return {...b,intake,plan,pending,dg:diagnosisOf(c,b)};
 }
 
-function buildFlyer(c, st, x){
-  const ai=AI2[c.code], t=totals(st.plan);
-  const fill=s=>s.replace('{bmi}',x.bmi).replace('{meat}',t.meat_m||0);
+function flagsOf(c, x){
   const hi=[]; const l=k=>lab(c,k)?.value;
   if(l('HbA1C')>7) hi.push(`血糖偏高（HbA1c ${l('HbA1C')}%）`);
   if(l('LDL-C')>100||l('TG')>150) hi.push(`血脂偏高（LDL ${l('LDL-C')}、TG ${l('TG')}）`);
   if(x.dg.dx.includes('高血壓')) hi.push('有高血壓');
   if(x.ckdLow||x.stage==='G3a'||x.stage==='G3b') hi.push(`腎功能${STAGE_ZH[x.stage]}`);
+  return hi;
+}
+function buildFlyer(c, st, x){
+  const ai=AI2[c.code], t=totals(st.plan);
+  const fill=s=>s.replace('{bmi}',x.bmi).replace('{meat}',t.meat_m||0);
+  const hi=flagsOf(c,x);
   return {
     goals:[...ai.goals],
     on:{key:true,menu:true,avoid:true,weight:true,out:true,exercise:true},
@@ -771,18 +805,18 @@ function renderInput(c, st, x){
     ['病人診斷','入院診斷、個人史（P4 系統帶入）',`衛教中心「相關疾病」勾選＋由 Cr 推算 CKD 分期`,'part','缺入院診斷文字'],
     ['護理紀錄','護理紀錄（P6 排便等由 TPR 帶入）',`衛教中心個管師衛教紀錄 ${c.visits.length} 次`,'alt','院方未提供住院護理紀錄'],
     ['檢驗數值','檢驗摘要（P5 最近一筆）',`HIS 檢驗 ${nLab} 筆（${roc(c.lab_json_range[0])}–${roc(c.lab_json_range[1])}）`,'ok',''],
-    ['營養師飲食紀錄','P9 訪視紀錄（功能一產出）','營養部營養評估單的 24 小時飲食回顧','ok','功能二的輸入'],
+    ['營養師飲食紀錄','P9 營養師訪視紀錄','營養部營養評估單的 24 小時飲食回顧','ok','衛教單張的輸入'],
     ['飲食醫囑／管灌','P6、P11 系統帶入最近一筆','—','none','門診個案無此資料'],
   ];
   return `
-    <div class="sech"><div><h3>${ic('db')}<span>1. AI 生成的輸入資料</span><span class="pill">依「住院營養照護紀錄流程」P9、P12</span></h3>
+    <div class="sech"><div><h3>${ic('db')}<span>1. 住院營養照護紀錄</span><span class="pill">依「住院營養照護紀錄流程」P9、P12</span></h3>
       <p>AI 只依下列資料生成；每項標示院方定義與本示範實際使用的資料來源</p></div>
       <div class="rt"><small>個案病歷號 DEMO-${c.code}：</small><b>個案 ${c.code}</b></div></div>
     <div class="maptbl"><table>
       <thead><tr><th>AI 輸入</th><th>院方流程定義</th><th>本示範使用的資料</th><th>對應</th></tr></thead>
       <tbody>${rows.map(([a,b,s,m,n])=>`<tr><td><b>${a}</b></td><td>${b}</td><td>${s}${n?`<small>${n}</small>`:''}</td><td>${matchTag(m)}</td></tr>`).join('')}</tbody></table>
-      <div class="use"><span>功能一（P9 訪視紀錄）使用：</span>${srcChip('診斷','dx')}${srcChip('護理紀錄','nr')}${srcChip('檢驗','lb')}
-        <span style="margin-left:14px">功能二（P12 衛教單張）使用：</span>${srcChip('診斷','dx')}${srcChip('護理紀錄','nr')}${srcChip('檢驗','lb')}${srcChip('營養師飲食紀錄','dt')}</div></div>
+      <div class="use"><span>營養師訪視紀錄（P9）使用：</span>${srcChip('診斷','dx')}${srcChip('護理紀錄','nr')}${srcChip('檢驗','lb')}
+        <span style="margin-left:14px">衛教單張（P12）使用：</span>${srcChip('診斷','dx')}${srcChip('護理紀錄','nr')}${srcChip('檢驗','lb')}${srcChip('營養師飲食紀錄','dt')}</div></div>
 
     <div class="inblk"><div class="ih">${srcChip('診斷','dx')}<b>病人診斷</b>${matchTag('part')}</div>
       <div class="dxrow"><div><small>主診斷</small><b>${x.dg.main}</b></div><div><small>共病</small>${x.dg.dx.join('、')||'—'}</div><div><small>用藥</small>${x.dg.drugs.join('、')}</div></div></div>
@@ -794,8 +828,8 @@ function renderInput(c, st, x){
       <div class="lvrow">${recent}</div>
       <div class="charts" style="margin-top:14px">${charts}</div></div>
 
-    <div class="cta"><div class="t"><b>${ic('sparkles','sm')}AI 已於訪視前產生營養訪視紀錄，並回寫 HIS 備註欄</b>營養師訪視病人後，請到功能一修改／補充並確認。</div>
-      <button class="btn te lg" data-act="tab" data-t="visit">${ic('arrow','sm')}前往功能一</button></div>`;
+    <div class="cta"><div class="t"><b>${ic('sparkles','sm')}AI 已於訪視前產生營養訪視紀錄，並回寫 HIS 備註欄</b>營養師訪視病人後，請到「營養師訪視紀錄」修改／補充並確認。</div>
+      <button class="btn te lg" data-act="tab" data-t="visit">${ic('arrow','sm')}前往營養師訪視紀錄</button></div>`;
 }
 
 /* ---------- 步驟 2：功能一 AI 營養訪視紀錄（P9） ---------- */
@@ -805,7 +839,7 @@ function renderVisit(c, st, x){
   const showLow=x.ckdLow||Object.values(st.plan).some(m=>m.lowN);
   return `
   <div class="${lk?'locked':''}">
-    <div class="sech"><div><h3>${ic('stetho')}<span>2. 功能一：AI 營養訪視紀錄</span><span class="pill gray">對應 HIS「腸道靜脈營養 › 備註」P9</span></h3>
+    <div class="sech"><div><h3>${ic('stetho')}<span>2. 營養師訪視紀錄</span><span class="pill ai">✦ AI 生成</span><span class="pill gray">對應 HIS「腸道靜脈營養 › 備註」P9</span></h3>
       <p>AI 由病人診斷、護理紀錄、檢驗數值產出內容，再回寫 HIS 系統；營養師訪視完病人再修改／補充</p></div>
       <div class="rt"><small>當前個案：</small><b>個案 ${c.code}</b></div></div>
 
@@ -851,8 +885,8 @@ function renderVisit(c, st, x){
       <pre>${esc(hisNote(c,st,x))}</pre></div>
 
     <div class="signbox ${lk?'ok':''}">
-      <div class="t">${lk?`<b>✓ 訪視紀錄已確認 ${st.f1At}</b>已更新 HIS 備註欄；可進行功能二產生衛教單張。`:x.pending.length?`<b>尚有 ${x.pending.length} 項待填寫</b>${x.pending.join('、')}`:'<b>可以確認</b>確認後更新 HIS 備註欄，並作為衛教單張的輸入。'}</div>
-      ${lk?`<button class="btn" data-act="unconfirm1">重新編輯</button><button class="btn te" data-act="tab" data-t="flyer">${ic('arrow','sm')}前往功能二</button>`
+      <div class="t">${lk?`<b>✓ 訪視紀錄已確認 ${st.f1At}</b>已更新 HIS 備註欄；可產生衛教單張。`:x.pending.length?`<b>尚有 ${x.pending.length} 項待填寫</b>${x.pending.join('、')}`:'<b>可以確認</b>確認後更新 HIS 備註欄，並作為衛教單張的輸入。'}</div>
+      ${lk?`<button class="btn" data-act="unconfirm1">重新編輯</button><button class="btn te" data-act="tab" data-t="flyer">${ic('arrow','sm')}前往衛教單張</button>`
           :`<button class="btn pri lg" data-act="confirm1" ${x.pending.length?'disabled':''}>${ic('upload','sm')}確認並更新 HIS</button>`}
     </div>
   </div>`;
@@ -866,17 +900,18 @@ function hisNote(c,st,x){
 
 /* ---------- 步驟 3：功能二 AI 衛教單張（P12） ---------- */
 function renderFlyerTab(c, st, x){
-  const head=`<div class="sech"><div><h3>${ic('file')}<span>3. 功能二：AI 衛教單張</span><span class="pill gray">對應 HIS「營養介入 › 營養教育及諮詢處置」P12</span></h3>
+  const head=`<div class="sech"><div><h3>${ic('file')}<span>3. 衛教單張</span><span class="pill ai">✦ AI 生成</span><span class="pill gray">對應 HIS「營養介入 › 營養教育及諮詢處置」P12</span></h3>
       <p>AI 由病人診斷、護理紀錄、檢驗數值及營養師飲食紀錄產出衛教單張（圖示），由營養師審視／修改再回寫 HIS 存檔為病歷；單張附 QR Code</p></div>
       <div class="rt">${st.f2!=='none'?`<button class="btn" data-act="print">${ic('printer','sm')}列印</button>`:''}</div></div>`;
-  if(st.f1!=='done') return head+`<div class="gate">${ic('lock')}<div><b>需先確認功能一的訪視紀錄</b>衛教單張要使用營養師訪視後的飲食紀錄（P9 產出）作為輸入。</div><button class="btn te" data-act="tab" data-t="visit">前往功能一</button></div>`;
+  if(st.generating) return head+'<div id="aihost"></div>';
+  if(st.f1!=='done') return head+`<div class="gate">${ic('lock')}<div><b>需先確認營養師訪視紀錄</b>衛教單張要使用營養師訪視後的飲食紀錄（P9 產出）作為輸入。</div><button class="btn te" data-act="tab" data-t="visit">前往營養師訪視紀錄</button></div>`;
   if(st.f2==='none') return head+`<div class="gate go">${ic('sparkles')}<div><b>輸入已備妥</b>${srcChip('診斷','dx')}${srcChip('護理紀錄','nr')}${srcChip('檢驗','lb')}${srcChip('營養師飲食紀錄','dt')}<br>建議 ${st.kcal} 大卡、蛋白質 ${st.protein} g；目前攝取 ${x.intake.kcal} 大卡。</div><button class="btn te lg" data-act="gen2">${ic('sparkles','sm')}AI 產生衛教單張</button></div>`;
   const f=st.flyer, saved=st.f2==='saved';
   return head+`
     <div class="${saved?'locked':''}">
     <div class="goalbox"><div class="lbl">營養教育目標 <span class="aitag">✦ AI 建議</span><span class="src">營養師勾選</span></div>
       <div class="goals">${GOAL_OPTIONS.map(g=>`<label class="${f.goals.includes(g)?'on':''}"><input type="checkbox" data-kind="goal" data-f="${g}" ${f.goals.includes(g)?'checked':''}>${g}</label>`).join('')}</div></div>
-    <div class="edhint">${ic('sign','sm')}${saved?'已存檔，內容已鎖定。':'單張內容可直接點選文字修改；每個區塊右上角可隱藏。份量來自功能一的建議攝取量。'}</div>
+    <div class="edhint">${ic('sign','sm')}${saved?'已存檔，內容已鎖定。':'單張內容可直接點選文字修改；每個區塊右上角可隱藏。份量來自營養師訪視紀錄的建議攝取量。'}</div>
     <div class="paper" id="print-area">${flyerHTML(c,st,x,!saved)}</div>
     </div>
     <div class="signbox ${saved?'ok':''}">
@@ -923,9 +958,9 @@ function drawQR(){
 
 /* ---------- 右欄 ---------- */
 function renderRight(c, st, x){
-  const T=[['input','db','1. AI 輸入資料',''],
-           ['visit','stetho','2. 功能一：訪視紀錄',st.f1==='done'?'<span class="ok">已確認</span>':`<span class="cnt">待補充</span>`],
-           ['flyer','file','3. 功能二：衛教單張',st.f2==='saved'?'<span class="ok">已存檔</span>':st.f2==='draft'?'<span class="cnt">待審</span>':'']];
+  const T=[['input','db','1. 住院營養照護紀錄',''],
+           ['visit','stetho','2. 營養師訪視紀錄',st.f1==='done'?'<span class="ok">已確認</span>':`<span class="cnt">待補充</span>`],
+           ['flyer','file','3. 衛教單張',st.f2==='saved'?'<span class="ok">已存檔</span>':st.f2==='draft'?'<span class="cnt">待審</span>':'']];
   const body=tab==='input'?renderInput(c,st,x):tab==='visit'?renderVisit(c,st,x):renderFlyerTab(c,st,x);
   return `<div class="tabs">${T.map(([k,i,t,b])=>`<button class="tab ${tab===k?'on':''}" data-act="tab" data-t="${k}">${ic(i)}<span>${t}</span>${b}</button>`).join('')}</div>
     <div class="tbody">${body}</div>`;
@@ -934,7 +969,7 @@ function renderBar(c, st, x){
   let msg, acts='';
   if(st.f1!=='done'){
     const n=x.pending.length;
-    msg=n?`個案 ${c.code}：功能一尚有 <b>${n} 項</b>待營養師補充：${x.pending.join('、')}<button class="pend" data-act="fill">帶入示範訪視資料</button>`:`個案 ${c.code}：<b style="color:var(--em700)">訪視資料已補齊</b>，請確認訪視紀錄`;
+    msg=n?`個案 ${c.code}：訪視紀錄尚有 <b>${n} 項</b>待營養師補充：${x.pending.join('、')}<button class="pend" data-act="fill">帶入示範訪視資料</button>`:`個案 ${c.code}：<b style="color:var(--em700)">訪視資料已補齊</b>，請確認訪視紀錄`;
     acts=`<button class="btn pri" data-act="confirm1" ${n?'disabled':''}>${ic('upload','sm')}確認並更新 HIS</button>`;
   } else if(st.f2==='none'){
     msg=`個案 ${c.code}：<b style="color:var(--em700)">✓ 訪視紀錄已確認</b>，可產生衛教單張`;
@@ -957,6 +992,69 @@ function render(){
   renderBar(c,st,x);
   drawQR();
   window.scrollTo(0,y);
+  if(tab==='visit' && !st.ai1Played && st.f1!=='done' && !busy){ st.ai1Played=true; runVisitGen(c,st,'AI 於訪視前產生營養師訪視紀錄'); }
+  if(st.reveal){ st.reveal=false; const fl=$('.flyer'); if(fl){ fl.classList.add('reveal');
+    fl.querySelectorAll('.fh,.fhero,.fsec,.pc,.ff').forEach((el,i)=>el.style.animationDelay=`${i*90}ms`); } }
+}
+
+/* ---------- AI 判讀動畫（示範用：模擬模型逐步讀取輸入與產生內容） ---------- */
+let busy=false, skipAnim=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,skipAnim?0:ms));
+async function aiWork(host, title, steps){
+  host.innerHTML=`<div class="aiwork"><div class="aw-h"><span class="aw-orb">${ic('sparkles')}</span><div><b>${title}</b><small class="aw-t">模型判讀中…</small></div><button class="pend" data-act="skip">略過動畫</button></div>
+    <div class="aw-bar"><i></i></div><ol class="aw-steps">${steps.map(([l])=>`<li><span class="aw-s"></span><div><b>${l}</b><small></small></div></li>`).join('')}</ol></div>`;
+  const lis=host.querySelectorAll('.aw-steps li'), bar=host.querySelector('.aw-bar i');
+  for(let i=0;i<steps.length;i++){
+    lis[i].classList.add('run'); bar.style.width=`${(i+.5)/steps.length*100}%`;
+    await sleep(520+Math.random()*380);
+    lis[i].classList.replace('run','ok'); lis[i].querySelector('small').textContent=steps[i][1];
+    bar.style.width=`${(i+1)/steps.length*100}%`;
+    await sleep(140);
+  }
+}
+async function typeInto(el, text){
+  el.classList.add('typing');
+  for(let i=0;i<text.length && !skipAnim;i+=2+Math.floor(Math.random()*3)){ el.value=text.slice(0,i); el.scrollTop=el.scrollHeight; await sleep(18); }
+  el.value=text; el.classList.remove('typing');
+}
+function visitSteps(c, x){
+  const lv=c.visits[c.visits.length-1], n=c.labs.filter(r=>r.src==='HIS檢驗').length, fl=flagsOf(c,x);
+  return [['讀取病人診斷',`${x.dg.main}；共病 ${x.dg.dx.length} 項`],
+    ['讀取護理紀錄',`${c.visits.length} 筆，最近 ${roc(lv.date)}${lv.note?`「${lv.note}」`:''}`],
+    ['讀取檢驗數值',`${n} 筆 · HbA1c ${lab(c,'HbA1C').value}% · Cr ${x.cr.value} · eGFR ${Math.round(x.egfr)}`],
+    ['判讀臨床重點',fl.join('、')||'無明顯異常'],
+    ['撰寫訪視紀錄','依 HIS 備註欄格式產生草稿']];
+}
+function flyerSteps(c, st, x){
+  const t=totals(st.plan), ai=AI2[c.code];
+  return [['讀取診斷、護理紀錄、檢驗',`${x.dg.main} · 護理紀錄 ${c.visits.length} 筆 · 檢驗 ${c.labs.filter(r=>r.src==='HIS檢驗').length} 筆`],
+    ['讀取營養師訪視紀錄（P9）',`目前攝取 ${x.intake.kcal} 大卡 → 建議 ${st.kcal} 大卡、蛋白質 ${st.protein} g`],
+    ['換算六大類份量',PORTION.map(p=>`${p.name.slice(0,2)} ${p.k==='grain'?(t.grain||0)+(t.lowN||0):(t[p.k]||0)}`).join(' · ')],
+    ['挑選個人化衛教重點',`${ai.key.length} 項提醒 · ${ai.goals.length} 項營養教育目標${flagsOf(c,x).length?' · 依 '+flagsOf(c,x).join('、'):''}`],
+    ['排版衛教單張與圖示','依營養部衛教單張範本'],
+    ['產生 QR Code','病人可用手機掃描查看']];
+}
+async function runVisitGen(c, st, title){
+  busy=true; skipAnim=false;
+  const ta=document.querySelector('textarea[data-f=note1]'); if(!ta){ busy=false; return; }
+  const fld=ta.closest('.fld'), host=document.createElement('div'); fld.before(host);
+  ta.value=''; ta.readOnly=true; fld.classList.add('dim');
+  await aiWork(host,title,visitSteps(c,derive(c,st)));
+  fld.classList.remove('dim');
+  const text=AI1[c.code](c,baseOf(c,st));
+  await typeInto(ta,text);
+  host.querySelector('.aw-t').textContent='完成，已回寫 HIS 備註欄'; host.querySelector('.aiwork').classList.add('done');
+  await sleep(700);
+  st.note1=text; st.note1Edited=false; st.ai1At=new Date(); busy=false; skipAnim=false;
+  if(DATA[cur]===c && tab==='visit'){ render(); toast('AI 訪視紀錄已產生並回寫 HIS'); }
+}
+async function runFlyerGen(c, st){
+  busy=true; skipAnim=false; st.generating=true; tab='flyer'; render(); window.scrollTo({top:0,behavior:'smooth'});
+  await aiWork($('#aihost'),'AI 產生衛教單張',flyerSteps(c,st,derive(c,st)));
+  $('#aihost .aw-t').textContent='完成'; $('#aihost .aiwork').classList.add('done');
+  await sleep(500);
+  st.flyer=buildFlyer(c,st,derive(c,st)); st.f2='draft'; st.generating=false; st.reveal=true; busy=false; skipAnim=false;
+  render(); toast('衛教單張已產生，請審視');
 }
 
 const rdName=()=>($('#rd')?.value||'營養師').trim();
@@ -964,16 +1062,16 @@ function openModal(html){ const m=$('#mask'); m.innerHTML=`<div class="modal">${
 function closeModal(){ $('#mask').classList.remove('on'); $('#mask').innerHTML=''; }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1800); }
 function goTab(t){ tab=t; render(); window.scrollTo({top:0,behavior:'smooth'}); }
-function spinBtn(b,txt){ b.innerHTML=`<span class="spin"></span>${txt}`; b.disabled=true; }
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-act]'); if(!b) { if(e.target===$('#mask')) closeModal(); return; }
   const c=DATA[cur], st=ST[c.code], act=b.dataset.act;
+  if(act==='skip'){ skipAnim=true; return; }
+  if(busy) return;
   if(act==='pick'){ cur=+b.dataset.i; render(); window.scrollTo(0,0); }
   else if(act==='tab'){ goTab(b.dataset.t); }
-  else if(act==='regen1'){ spinBtn(b,'產生中');
-    setTimeout(()=>{ st.note1=AI1[c.code](c,baseOf(c,st)); st.note1Edited=false; st.ai1At=new Date(); render(); toast('AI 訪視紀錄已重新產生並回寫 HIS'); },900); }
+  else if(act==='regen1'){ runVisitGen(c,st,'AI 重新產生營養師訪視紀錄'); }
   else if(act==='fill'){ const sh=c.sheet;
     st.recall=Object.fromEntries(MEALS.map(m=>[m,clone(sh.intake[m]||{})]));
     if(!st.supplement.trim()) st.supplement=visitNote(c);
@@ -982,8 +1080,7 @@ document.addEventListener('click', e=>{
     st.plan=Object.fromEntries(MEALS.map(m=>[m,clone(p[m]||{})])); render(); toast('已依目標熱量與蛋白質重新分配'); }
   else if(act==='confirm1'){ st.f1='done'; st.f1At=nowRoc(); if(st.f2==='draft') st.flyerStale=true; tab='visit'; render(); toast('訪視紀錄已確認並更新 HIS'); }
   else if(act==='unconfirm1'){ st.f1='his'; if(st.f2==='saved'){ st.f2='draft'; st.savedAt=null; } render(); }
-  else if(act==='gen2'){ spinBtn(b,'AI 產生中'); const x=derive(c,st);
-    setTimeout(()=>{ st.flyer=buildFlyer(c,st,x); st.f2='draft'; tab='flyer'; render(); window.scrollTo({top:0,behavior:'smooth'}); toast('衛教單張已產生，請審視'); },1200); }
+  else if(act==='gen2'){ runFlyerGen(c,st); }
   else if(act==='hide'){ st.flyer.on[b.dataset.f]=false; render(); }
   else if(act==='show'){ st.flyer.on[b.dataset.f]=true; render(); }
   else if(act==='save2'){
@@ -997,7 +1094,7 @@ document.addEventListener('click', e=>{
   else if(act==='close'){ closeModal(); }
 });
 document.addEventListener('change', e=>{
-  const el=e.target, k=el.dataset.kind; if(!k) return;
+  const el=e.target, k=el.dataset.kind; if(!k||busy) return;
   const c=DATA[cur], st=ST[c.code];
   if(k==='recall'||k==='plan'){ const v=parseFloat(el.value); const m=st[k][el.dataset.meal];
     if(v>0) m[el.dataset.g]=v; else delete m[el.dataset.g]; }
