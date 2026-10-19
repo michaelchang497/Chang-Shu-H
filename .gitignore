@@ -11,3 +11,6 @@ Chang-Shu-H-main/*
 
 # internal hospital reference docs — do not publish to a public repo
 reference/
+
+# 含真實病歷號的原始資料處理腳本，不可公開
+demo/

@@ -23,6 +23,11 @@ jobs:
         run: |
           mkdir -p dist
           cp Chang-Shu-H-main/index.html dist/index.html
+      - name: Add 營養評估單 page and nav tab
+        run: |
+          cp site/nutrition.html site/inject-nav.js dist/
+          sed -i 's#</body>#<script src="inject-nav.js"></script></body>#' dist/index.html
+          grep -q 'inject-nav.js' dist/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
