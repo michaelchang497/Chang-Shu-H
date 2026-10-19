@@ -541,7 +541,9 @@ function diagnosisOf(c, x){
   const v=c.visits[c.visits.length-1];
   const drugs=[...new Set(v.drugs)].filter(s=>s!=='無');
   const insulin=c.visits.some(v=>v.insulin);
-  return {main:`第 2 型糖尿病${x.stage?`併慢性腎臟病 ${STAGE[x.stage]}`:''}`, dx, drugs:['口服降血糖藥',...(insulin?['胰島素']:[]),...drugs]};
+  // eGFR ≥ 60 且無白蛋白尿（UACR < 30）時不構成 CKD，不標示分期
+  const uacr=lab(c,'UACR')?.value, ckd=x.egfr!==null&&(x.egfr<60||uacr>=30);
+  return {main:`第 2 型糖尿病${ckd?`併慢性腎臟病 ${STAGE[x.stage]}`:''}`, dx, drugs:['口服降血糖藥',...(insulin?['胰島素']:[]),...drugs]};
 }
 
 /* ---------- 功能一：AI 營養訪視紀錄草稿（模擬模型輸出；數值取自資料） ---------- */
