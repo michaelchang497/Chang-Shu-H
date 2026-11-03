@@ -286,7 +286,26 @@ table.grid input.nz{font-weight:700;color:var(--s900)}
 .dxrow{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;font-size:12px;color:var(--s700)}
 .dxrow small{display:block;font-size:10px;color:var(--s400);font-weight:600;margin-bottom:2px}
 .lvrow{display:flex;flex-wrap:wrap;gap:8px}
-.lv{border:1px solid var(--s200);border-radius:8px;padding:4px 10px;background:var(--s50);min-width:76px}
+.lv{border:1px solid var(--s200);border-radius:8px;padding:4px 10px;background:var(--s50);min-width:76px;font:inherit;text-align:left;cursor:pointer}
+button.lv:hover{border-color:var(--te700)}
+.labbigs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.labbig{border:1px solid var(--s200);border-radius:12px;padding:10px 14px;background:#fff;font:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.labbig:hover{border-color:var(--te700);box-shadow:0 2px 8px rgba(15,118,110,.12)}
+.labbig small{font-size:11px;color:var(--s500);font-weight:700}
+.labbig b{font-family:var(--font-mono);font-size:24px;color:var(--s800);line-height:1.2}
+.labbig i{font-style:normal;font-size:10px;color:var(--s400);font-family:var(--font-mono)}
+.labrest summary{cursor:pointer;font-size:11.5px;color:var(--s500);font-weight:600;margin:4px 0 8px}
+.labtbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+.labtbl td,.labtbl th{border-bottom:1px solid var(--s100);padding:4px 8px;text-align:left}
+.labscroll{max-height:200px;overflow:auto}
+.suppbox{margin:10px 0;padding:10px 12px;border:1px dashed var(--s300);border-radius:10px;background:var(--s50)}
+.sbh{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px}
+.sbh .btn{margin-left:auto}
+.supprow{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.supprow input.t{width:70px}
+.supprow .u,.supprow .ro2{font-size:11.5px;color:var(--s500)}
+.supprow .ro2{font-family:var(--font-mono)}
+
 .lv small{display:block;font-size:9.5px;color:var(--s400);font-weight:600}
 .lv b{font-family:var(--font-mono);font-size:13px;color:var(--s800)}
 .lv i{font-style:normal;font-size:9.5px;color:var(--s400);margin-left:4px;font-family:var(--font-mono)}
@@ -529,6 +548,12 @@ const EX = {
   grain:{kcal:70,P:2,F:0,C:15}, lowN:{kcal:70,P:0,F:0,C:17}, meat_m:{kcal:75,P:7,F:5,C:0},
   milk_f:{kcal:150,P:8,F:8,C:12}, veg:{kcal:25,P:1,F:0,C:5}, fruit:{kcal:60,P:0,F:0,C:15}, oil:{kcal:45,P:0,F:5,C:0},
 };
+const SUPPS = [  // 成分為示意，待院方提供實際清單
+  {id:'std',name:'一般配方（如益力壯）',unit:'罐 237 mL',kcal:250,P:9},
+  {id:'dm',name:'糖尿病配方',unit:'罐 237 mL',kcal:220,P:10},
+  {id:'ckd',name:'腎臟病配方（如腎補康）',unit:'罐 237 mL',kcal:425,P:19},
+  {id:'pro',name:'高蛋白粉',unit:'匙',kcal:100,P:20}];
+const WB = [['IBW','理想體重'],['ADJ','調整體重'],['ACT','現有體重']];
 const GROUPS = ['grain','lowN','meat_m','milk_f','veg','fruit','oil'];
 const GNAME = {grain:'五穀根莖',lowN:'低氮澱粉',meat_m:'豆魚肉類中脂',milk_f:'奶類全脂',veg:'蔬菜',fruit:'水果',oil:'油脂'};
 const GHEAD = {grain:'五穀<br>根莖',lowN:'低氮<br>澱粉',meat_m:'豆魚肉<br>中脂',milk_f:'奶類<br>全脂',veg:'蔬菜',fruit:'水果',oil:'油脂'};
@@ -560,10 +585,13 @@ function nutr(t){ const o={kcal:0,P:0,F:0,C:0};
   return o; }
 function latest(c,key,on){ const rows=c.labs.filter(r=>r.key===key&&typeof r.value==='number'&&r.date<=on); return rows.length?rows[rows.length-1]:null; }
 const series=(c,key)=>c.labs.filter(r=>r.key===key&&typeof r.value==='number');
+const suppOf = id => SUPPS.find(o=>o.id===id)||SUPPS[0];
+const suppSum = list => list.reduce((a,r)=>{ const o=suppOf(r.id); a.kcal+=o.kcal*r.n; a.P+=o.P*r.n; return a; },{kcal:0,P:0});
+const withSupp = (o,list) => { const s=suppSum(list); s.kcal=r1(s.kcal); s.P=r1(s.P); return {...o,kcal:r1(o.kcal+s.kcal),P:r1(o.P+s.P),sup:s}; };
 const isEmpty = meals => !Object.values(meals).some(m=>Object.values(m).some(Boolean));
 
-function makePlan(kcal, protein, ckdLow){
-  const t={milk_f:1,fruit:2,veg:3}, base=nutr(t);
+function makePlan(kcal, protein, ckdLow, useMilk=true){
+  const t={fruit:2,veg:3}; if(useMilk) t.milk_f=1; const base=nutr(t);
   const gAll=Math.max(6,Math.round((kcal*RULES.carbPct/100/4-base.C)/15));
   const lowN=ckdLow?Math.round(gAll*RULES.lowNShare):0;
   t.grain=gAll-lowN; if(lowN) t.lowN=lowN;
@@ -572,7 +600,7 @@ function makePlan(kcal, protein, ckdLow){
   return t;
 }
 function distribute(t, nMeals){
-  const names=nMeals>=4?['早餐','午餐','晚餐','晚點']:['早餐','午餐','晚餐'];
+  const names=nMeals>=6?[...MEALS]:nMeals===5?['早餐','午餐','午點','晚餐','晚點']:nMeals===4?['早餐','午餐','晚餐','晚點']:['早餐','午餐','晚餐'];
   const m=Object.fromEntries(names.map(n=>[n,{}]));
   const put=(meal,g,n)=>{ if(n>0) m[meal][g]=(m[meal][g]||0)+n; };
   if(t.milk_f) put(nMeals>=4?'晚點':'早餐','milk_f',t.milk_f);
@@ -583,7 +611,8 @@ function distribute(t, nMeals){
   const mt=t.meat_m||0;
   if(mt>=3){put('早餐','meat_m',1);put('午餐','meat_m',1);put('晚餐','meat_m',mt-2);} else {put('午餐','meat_m',Math.ceil(mt/2));put('晚餐','meat_m',Math.floor(mt/2));}
   const v=t.veg||0; put('早餐','veg',1); put('午餐','veg',Math.ceil((v-1)/2)); put('晚餐','veg',Math.floor((v-1)/2));
-  const f=t.fruit||0; put('午餐','fruit',Math.ceil(f/2)); put('晚餐','fruit',Math.floor(f/2));
+  const f=t.fruit||0, ft=nMeals>=6?['早點','午點']:nMeals===5?['午點']:['午餐','晚餐'];  // 5–6 餐時水果移到點心
+  ft.forEach((mn,i)=>put(mn,'fruit',i===0?Math.ceil(f/ft.length):Math.floor(f/ft.length)));
   const o=t.oil||0; put('早餐','oil',Math.min(1,o)); put('午餐','oil',Math.ceil((o-1)/2)); put('晚餐','oil',Math.floor((o-1)/2));
   return m;
 }
@@ -592,10 +621,11 @@ function distribute(t, nMeals){
 function baseOf(c, st){
   const sh=c.sheet, d=sh.date, ht=st.ht, wt=st.wt;
   const ibw=Math.round(22*(ht/100)**2), bmi=r1(wt/((ht/100)**2));
+  const wb=st.wBasis||'IBW', refW=wb==='ACT'?wt:wb==='ADJ'?r1(ibw+0.25*(wt-ibw)):ibw;  // 調整體重為示意公式，待院方確認
   const cr=latest(c,'Cr',d), egfr=cr?egfr2021(cr.value,sh.age,sh.sex):null, stage=egfr?stageOf(egfr):null;
   const band=RULES.proteinBands.find(b=>egfr>=b.min);
-  return {ibw,bmi,cr,egfr,stage,band,ckdLow:egfr!==null&&egfr<30,
-    sugKcal:Math.round(ibw*RULES.kcalFactor/100)*100, sugProtein:Math.round(ibw*band.gkg),
+  return {ibw,bmi,cr,egfr,stage,band,ckdLow:egfr!==null&&egfr<30,refW,basisLabel:WB.find(b=>b[0]===wb)[1],
+    sugKcal:Math.round(refW*RULES.kcalFactor/100)*100, sugProtein:Math.round(refW*band.gkg),
     bmiClass:bmi<18.5?'體重過輕':bmi<24?'體重正常':bmi<27?'過重':bmi<35?'肥胖':'重度肥胖'};
 }
 const lab = (c,k) => latest(c,k,c.sheet.date);
@@ -675,6 +705,7 @@ const ST = {ipd:{}, opd:{}};
 function initCommon(c){
   const sh=c.sheet, st={ht:sh.anthro.ht, wt:sh.anthro.wt, meals:sh.dietitian.meals,
     recall:Object.fromEntries(MEALS.map(m=>[m,{}])),
+    supps:{recall:[],plan:[]}, wBasis:'IBW', useMilk:true,
     f2:'none',                    // none / draft / (門診) review / saved
     flyer:null, savedAt:null};
   const b=baseOf(c,st);
@@ -686,7 +717,7 @@ function initCommon(c){
 function initState(c){
   const [st,b]=initCommon(c);
   // 功能一 his：AI 草稿已回寫 HIS，待營養師訪視；done：營養師已確認
-  Object.assign(st,{f1:'his', note1:AI1[c.code](c,b), note1Edited:false, supplement:'', ai1At:new Date(Date.now()-35*60e3)});
+  Object.assign(st,{ncp:[{cat:'',P:'',E:'',S:''}], f1:'his', note1:AI1[c.code](c,b), note1Edited:false, supplement:'', ai1At:new Date(Date.now()-35*60e3)});
   return st;
 }
 function initOpd(c){
@@ -695,14 +726,18 @@ function initOpd(c){
   Object.assign(st,{f1:'todo',      // todo：門診紀錄填寫中；done：營養師已完成
     clinic:CLINICS[0], labDate:dates[dates.length-1], life:clone(lv.life), dietText:'',
     ncp:[{cat:'',P:'',E:'',S:''}], learn:Object.fromEntries(LEARN.map(([k])=>[k,''])), interv:[],
-    extra:{note:'',pre:'',post:'',dry:'',pdConc:'1.5%',pdVol:'',tx:[],ref:[],pg:{wt0:'',wDown:false,intake:0,sym:[],act:0}},
+    extra:{note:'',pre:'',post:'',dry:'',pdRows:[{type:PD_TYPES[0],vol:''}],pkStage:'未分期',tx:[],ref:[],refOther:'',pg:{wt0:'',wDown:false,intake:0,sym:[],act:0}},
+    dmMode:'', selfPay:'', stashAt:null, carried:false,
     sig:null, sigDraft:null});
   return st;
 }
 const QS=new URLSearchParams(location.search);
 let mode = QS.get('mode')==='opd'?'opd':'ipd';
 const TAB0 = {ipd:'input', opd:'orec'};
-const CLINICS=['糖尿病門診（補做）','糖尿病門診（預做）','自費門診','高檢','帕金森氏症','血液透析','腹膜透析','癌症營養門診','其他'];
+const CLINICS=['糖尿病門診','慢性腎臟病門診','自費門診','高檢','帕金森氏症','血液透析','腹膜透析','癌症營養門診','其他'];
+const HY=['未分期','第 1 期','第 1.5 期','第 2 期','第 2.5 期','第 3 期','第 4 期','第 5 期'];  // Hoehn-Yahr，示意
+const SELFPAY=['碳酸鈣','檸檬酸鈣','活性維生素 D','磷結合劑（自費）','維生素 B 群','魚油'];
+const PD_TYPES=['葡萄糖 1.5%','葡萄糖 2.5%','葡萄糖 4.25%','愛多尼爾 Extraneal 7.5%（澱粉類多醣）'];
 const LEARN=[['學習意願',['佳','可','差','不適用']],['理解力',['佳','可','差','不適用']],
   ['衛教後認知',['完全了解','普通了解','完全不了解','不適用']],['行為改變',['有意願執行力佳','有意願執行力可','有意願嘗試改變','不適用']]];
 DATA.forEach(c=>{ ST.ipd[c.code]=initState(c); ST.opd[c.code]=initOpd(c); });
@@ -710,9 +745,12 @@ let cur = Math.max(0, DATA.findIndex(c=>c.code===QS.get('case')));
 let tab = ({ipd:['input','visit','flyer'],opd:['orec','flyer','sign']}[mode].includes(QS.get('tab'))?QS.get('tab'):TAB0[mode]);
 const S = c => ST[mode][c.code];
 
+function replanNow(c, st){ const x=derive(c,st), sp=suppSum(st.supps.plan);
+  const p=distribute(makePlan(Math.max(0,st.kcal-sp.kcal),Math.max(0,st.protein-sp.P),x.ckdLow,st.useMilk!==false),st.meals);
+  st.plan=Object.fromEntries(MEALS.map(m=>[m,clone(p[m]||{})])); }
 function derive(c, st){
   const b=baseOf(c,st);
-  const intake=nutr(totals(st.recall)), plan=nutr(totals(st.plan));
+  const intake=withSupp(nutr(totals(st.recall)),st.supps.recall), plan=withSupp(nutr(totals(st.plan)),st.supps.plan);
   const pending=[];
   if(mode==='opd'){
     if(!st.dietText.trim()) pending.push('24 小時飲食紀錄');
@@ -722,6 +760,7 @@ function derive(c, st){
   } else {
     if(isEmpty(st.recall)) pending.push('24 小時飲食回顧');
     if(!st.supplement.trim()) pending.push('訪視補充');
+    if(!st.ncp[0].P) pending.push('營養診斷');
   }
   return {...b,intake,plan,pending,dg:diagnosisOf(c,b)};
 }
@@ -746,7 +785,7 @@ function buildFlyer(c, st, x){
   return {
     goals:[...ai.goals],
     on:{key:true,menu:true,avoid:true,weight:true,out:true,exercise:true},
-    key:[...ai.key.map(fill),...(habits.length?[`${habits.join('、')}會加重血管與腎臟負擔，建議戒除，需要協助可詢問戒治門診。`]:[])],
+    key:[...ai.key.map(fill),...(st.supps.plan.length?[`營養品：${st.supps.plan.map(r=>`${suppOf(r.id).name} ${r.n} ${suppOf(r.id).unit}`).join('、')}，已算在每日建議熱量與蛋白質內，請依營養師建議的份數使用。`]:[]),...(habits.length?[`${habits.join('、')}會加重血管與腎臟負擔，建議戒除，需要協助可詢問戒治門診。`]:[])],
     exercise:(exNone?'目前沒有運動習慣，先從輕鬆的活動開始。':'')+ai.exercise,
     flags:hi,
     avoid:['選擇低油烹調：清蒸、水煮、涼拌、燒烤、燉煮。','避免高糖食物：糖果、甜點、含糖飲料。','避免高膽固醇食物：肥肉、雞皮、內臟、蟹黃、魚卵。','避免高鹽食物：加工食品、醃漬品、醬菜、罐頭。'],
@@ -826,6 +865,61 @@ function gridTable(kind, meals, showLow, locked){
      return `<td><input type="number" min="0" step="0.5" inputmode="decimal" data-kind="${kind}" data-meal="${m}" data-g="${g}" value="${v}" class="${v?'nz':''}" aria-label="${m}${GNAME[g]}"${locked?' tabindex="-1"':''}></td>`}).join('')}</tr>`).join('')}
   <tr class="tot"><td class="m">合計</td>${gs.map(g=>`<td>${t[g]||'–'}</td>`).join('')}</tr></tbody></table></div>`;
 }
+
+/* ---------- 共用元件：營養品、建議攝取量、營養診斷、生化值 ---------- */
+function suppBox(kind, st, lk){
+  const list=st.supps[kind], sm=suppSum(list);
+  const rows=list.map((r,i)=>{ const o=suppOf(r.id);
+    return `<div class="supprow"><select data-kind="supp" data-k="${kind}" data-i="${i}" data-p="id" aria-label="營養品品項">${SUPPS.map(q=>`<option value="${q.id}" ${q.id===r.id?'selected':''}>${esc(q.name)}</option>`).join('')}</select>
+      <input class="t" type="number" min="0" step="0.5" data-kind="supp" data-k="${kind}" data-i="${i}" data-p="n" value="${r.n}" aria-label="份數"><span class="u">${esc(o.unit)}</span>
+      <span class="ro2">${r1(o.kcal*r.n)} 大卡 · 蛋白質 ${r1(o.P*r.n)} g</span>
+      ${lk?'':`<button class="pend" data-act="supp-del" data-k="${kind}" data-i="${i}">移除</button>`}</div>`; }).join('');
+  return `<div class="suppbox"><div class="sbh"><b>營養品</b>${newTag}<span class="ihn">下拉選品項，自動計算熱量與蛋白質；成分為示意，待院方提供清單</span>
+      ${lk?'':`<button class="btn sm" data-act="supp-add" data-k="${kind}">${ic('plus','sm')}新增營養品</button>`}</div>
+    ${rows||'<span class="ihn">未使用營養品</span>'}
+    ${list.length?`<div class="ihn" style="margin-top:4px">營養品合計 ${r1(sm.kcal)} 大卡、蛋白質 ${r1(sm.P)} g${kind==='plan'?'。已先從建議熱量、蛋白質扣除，再分配六大類份數':'。已計入熱量總計'}</div>`:''}</div>`;
+}
+function planBlock(c, st, x, lk, showLow, note){
+  const pl=x.plan, cls=(v,t,tol)=>Math.abs(v-t)<=t*tol?'ok':'warn';
+  return `<div class="fld"><div class="lbl">建議攝取量 <span class="src">${note}</span>
+      <span class="aux"><button class="btn sm" data-act="replan">${ic('refresh','sm')}依目標重新分配</button></span></div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="cell">體重基準 ${newTag}<select data-kind="basis" aria-label="體重基準">${WB.map(([v,t])=>`<option value="${v}" ${st.wBasis===v?'selected':''}>${t}</option>`).join('')}</select><span class="hint">${x.basisLabel} ${x.refW} kg${st.wBasis==='ADJ'?'（示意公式，待院方確認）':''}</span></div>
+      <div class="cell">建議熱量 kcal<input class="t" type="number" step="50" data-kind="num" data-f="kcal" value="${st.kcal}"><span class="hint">建議 ${x.sugKcal}（${x.basisLabel} ${x.refW} × ${RULES.kcalFactor}）</span></div>
+      <div class="cell">蛋白質 g<input class="t" type="number" step="1" data-kind="num" data-f="protein" value="${st.protein}"><span class="hint">建議 ${x.sugProtein}（${x.band.label}，${x.band.gkg.toFixed(1)} g/kg）</span></div>
+      <div class="cell">餐次<select data-kind="num" data-f="meals">${[3,4,5,6].map(n=>`<option ${n===st.meals?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="cell">奶製品 ${newTag}<label class="ck"><input type="checkbox" data-kind="milk" ${st.useMilk!==false?'checked':''}>含奶製品</label></div>
+    </div>
+    ${gridTable('plan',st.plan,showLow,lk)}
+    ${suppBox('plan',st,lk)}
+    <div class="sum">
+      <div class="b ${cls(pl.kcal,st.kcal,0.05)}">計畫熱量<b>${pl.kcal} / ${st.kcal}</b>${pl.sup.kcal?`<small>含營養品 ${pl.sup.kcal}</small>`:''}</div>
+      <div class="b ${cls(pl.P,st.protein,0.08)}">蛋白質 g<b>${pl.P} / ${st.protein}</b>${pl.sup.P?`<small>含營養品 ${pl.sup.P}</small>`:''}</div>
+      <div class="b ${pl.pct.carb>=45&&pl.pct.carb<=60?'ok':'warn'}">醣類<b>${pl.pct.carb}%</b></div>
+      <div class="b ${pl.pct.fat<=35?'ok':'warn'}">脂肪<b>${pl.pct.fat}%</b></div>
+    </div></div>`;
+}
+function ncpBlock(c, st, x, lk, note){
+  const ncp=st.ncp.map((n,i)=>`<div class="ncp"><div class="ncph">主診斷 ${i+1}${i&&!lk?` <button class="pend" data-act="ncp-del" data-i="${i}">移除</button>`:''}</div>
+      <div class="ncpg"><div class="cell">類別${fSel(st,`ncp.${i}.cat`,[['','請選擇'],...Object.entries(NCP_CAT)])}</div>
+      <div class="cell">P（診斷）${fSel(st,`ncp.${i}.P`,[['','請選擇'],...(NCP_P[n.cat]||[])])}</div>
+      <div class="cell">E（病因）${fSel(st,`ncp.${i}.E`,[['','請選擇'],...NCP_E])}</div>
+      <div class="cell">S（病徵）${fSel(st,`ncp.${i}.S`,[['','請選擇'],...new Set([...ncpS(c,st,x),...(n.S?[n.S]:[])])])}</div></div></div>`).join('');
+  return `<div class="inblk"><div class="ih"><b>營養診斷（NCP）</b><span class="src">${note}</span>
+      ${st.ncp.length<2&&!lk?`<button class="btn sm" data-act="ncp-add" style="margin-left:auto">${ic('plus','sm')}新增主診斷 2</button>`:''}</div>${ncp}</div>`;
+}
+const LABN={HbA1C:'糖化血色素 HbA1c',AC:'空腹血糖 AC',PC:'飯後血糖 PC',Cr:'肌酸酐 Cr',eGFR:'eGFR',BUN:'BUN',GOT:'GOT',GPT:'GPT',CHOL:'總膽固醇',TG:'三酸甘油酯 TG','LDL-C':'LDL-C','HDL-C':'HDL-C',UACR:'UACR'};
+const LAB_ALL=['HbA1C','AC','PC','Cr','eGFR','BUN','GOT','GPT','CHOL','TG','LDL-C','HDL-C','UACR'];
+const RENAL=['eGFR','Cr','BUN','UACR'];
+const LAB_PRI={'糖尿病門診':['HbA1C','AC','PC','LDL-C','TG'],'慢性腎臟病門診':RENAL,'血液透析':['BUN','Cr',...RENAL],'腹膜透析':['BUN','Cr',...RENAL],
+  '癌症營養門診':['GOT','GPT','Cr','AC'],'帕金森氏症':['AC','Cr','eGFR']};  // 示意排序，待院方確認；資料中無鉀、磷
+function labTiles(c, pri, get, label){
+  const order=[...new Set([...pri,...LAB_ALL])].map(k=>[k,get(k)]).filter(([,r])=>r);
+  const big=order.slice(0,3), rest=order.slice(3);
+  return `<div class="ihn" style="margin-bottom:8px">${label}　點選數值可看歷史報告與趨勢圖</div>
+    <div class="labbigs">${big.map(([k,r])=>`<button class="labbig" data-act="labhist" data-k="${k}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${roc(r.date)}</i></button>`).join('')}</div>
+    ${rest.length?`<details class="labrest"><summary>其他檢驗（${rest.length} 項）</summary><div class="lvrow">${rest.map(([k,r])=>`<button class="lv" data-act="labhist" data-k="${k}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${rocM(r.date)}</i></button>`).join('')}</div></details>`:''}`;
+}
 const srcChip = (label, kind) => `<span class="chip-src ${kind}">${label}</span>`;
 const MATCH = {ok:['符合','m-ok'], part:['部分符合','m-part'], alt:['以替代資料示範','m-alt'], none:['缺','m-none']};
 const matchTag = k => `<span class="mt ${MATCH[k][1]}">${MATCH[k][0]}</span>`;
@@ -847,7 +941,7 @@ function statusOf(st){
 function renderLeft(c, st, x){
   const sh=c.sheet, opd=mode==='opd';
   const list=DATA.map((p,i)=>{const s=p.sheet, ps=ST[mode][p.code], [lb,cl]=statusOf(ps);
-    const tags=opd?[[ps.clinic.replace(/（.*/,''),'blu'],...(s.stage_label?[[`${s.stage_label}（醫令）`,'']]:[]),...TAGS[p.code]]:TAGS[p.code];
+    const tags=opd?[[ps.clinic.replace(/（.*/,''),'blu'],...(ps.dmMode?[[ps.dmMode,'amb']]:[]),...(ps.stashAt&&ps.f2!=='saved'?[['暫存','amb']]:[]),...(s.stage_label?[[`${s.stage_label}（醫令）`,'']]:[]),...TAGS[p.code]]:TAGS[p.code];
     return `<button class="pitem ${i===cur?'on':''}" data-act="pick" data-i="${i}">
       <div class="r1"><span class="nm">個案 ${p.code}</span><span class="sub">${s.sex==='M'?'男':'女'} · ${s.age} 歲</span>
         <span class="st ${cl}">${lb}</span></div>
@@ -870,7 +964,7 @@ function renderLeft(c, st, x){
         <div class="id">病歷編碼：DEMO-${c.code}</div></div></div>
       <div class="stat3"><div><small>身高</small><b>${st.ht} cm</b></div><div><small>體重</small><b>${st.wt} kg</b></div><div><small>身體質量指數</small><b class="g">BMI ${x.bmi}</b></div></div>
       <div class="kv"><small>診斷：</small><div>${x.dg.main}${x.egfr?`（eGFR ${Math.round(x.egfr)}）`:''}<br><span style="color:var(--s500)">共病：</span>${x.dg.dx.join('、')||'—'}</div></div>
-      ${opd?`<div class="kv"><small>門診種類／LDM（醫令帶入）：</small><div>${st.clinic} · ${sh.stage_label||'本次無 LDM 醫令'}</div></div>`:''}
+      ${opd?`<div class="kv"><small>門診種類／LDM（醫令帶入）：</small><div>${st.clinic}${st.dmMode?`（${st.dmMode}）`:''} · ${sh.stage_label||'本次無 LDM 醫令'}${st.stashAt&&st.f2!=='saved'?`<br><span style="color:var(--s500)">已暫存 ${st.stashAt}</span>`:''}</div></div>`:''}
       <div class="kv"><small>用藥（衛教中心紀錄）：</small><div>${x.dg.drugs.join('、')}</div></div>
     </div>
   </div>
@@ -902,7 +996,7 @@ function renderInput(c, st, x){
   const charts=defs.map(([t,k,u,o,col])=>{ const rs=k?series(c,k).filter(r=>r.date<=d):egfrRows; const l=rs[rs.length-1];
     const old=l&&daysBetween(l.date,d)>180;
     return `<div class="chart"><div class="ch"><span style="font-family:var(--font-sans);font-size:12px">${t}</span>${l?`<span style="color:${col}">最新: ${l.value}${u}${old?`<em>${rocM(l.date)} · 逾半年</em>`:''}</span>`:''}</div>${chart(rs,o)}</div>`;}).join('');
-  const recent=['HbA1C','AC','Cr','BUN','LDL-C','TG','HDL-C','UACR'].map(k=>{const r=lab(c,k); return r?`<span class="lv"><small>${k}</small><b>${r.value}</b><i>${rocM(r.date)}</i></span>`:'';}).join('');
+  const recent=labTiles(c,['HbA1C','AC','eGFR','Cr'],k=>lab(c,k),'依主診斷（糖尿病併腎病變）優先排序，示意');
   const visits=c.visits.map((v,i)=>{const und=Object.entries(v.understanding).filter(([k,s])=>s!=='了解').map(([k])=>k);
     return `<div class="visit ${i===c.visits.length-1?'last':''}"><span class="d">${roc(v.date)}</span>
       <div><small>衛教項目</small><div class="tags">${v.edu_items.map(e=>`<span class="tg">${esc(e)}</span>`).join('')||'—'}</div></div>
@@ -933,7 +1027,7 @@ function renderInput(c, st, x){
       <div class="vgrid">${visits}</div></div>
 
     <div class="inblk"><div class="ih">${srcChip('檢驗','lb')}<b>檢驗數值</b>${matchTag('ok')}<span class="ihn">最近一筆</span></div>
-      <div class="lvrow">${recent}</div>
+      ${recent}
       <div class="charts" style="margin-top:14px">${charts}</div></div>
 
     <div class="cta"><div class="t"><b>${ic('sparkles','sm')}AI 已於訪視前產生營養訪視紀錄，並回寫 HIS 備註欄</b>營養師訪視病人後，請到「營養師訪視紀錄」修改／補充並確認。</div>
@@ -968,25 +1062,14 @@ function renderVisit(c, st, x){
         ${lk?'':'<button class="pend" data-act="fill">帶入示範訪視資料</button>'}</div>
       <div class="fld"><div class="lbl">24 小時飲食回顧（份） ${srcChip('營養師飲食紀錄','dt')}<span class="hintx">→ 衛教單張的輸入</span></div>
         ${gridTable('recall',st.recall,Object.values(st.recall).some(m=>m.lowN),lk)}
+        ${suppBox('recall',st,lk)}
         <div class="totrow"><span class="tl">熱量總計 · 實際攝取量</span>
-          <span>熱量<b>${ib.kcal}</b>大卡</span><span>蛋白質<b>${ib.P}</b>克</span><span>脂肪<b>${ib.F}</b>克</span><span>醣類<b>${ib.C}</b>克</span>
+          <span>熱量<b>${ib.kcal}</b>大卡</span><span>蛋白質<b>${ib.P}</b>克</span><span>脂肪<b>${ib.F}</b>克</span><span>醣類<b>${ib.C}</b>克</span>${ib.sup.kcal?`<span>含營養品<b>${ib.sup.kcal}</b>大卡</span>`:''}
           <span class="note">系統依食物代換表計算</span></div></div>
       <div class="fld"><div class="lbl">訪視補充 *</div>
         <textarea data-kind="text" data-f="supplement" rows="2" class="${st.supplement.trim()?'':'req'}" placeholder="例：訪視所見、病人飲食習慣、營養品使用情形…">${esc(st.supplement)}</textarea></div>
-      <div class="fld"><div class="lbl">建議攝取量 <span class="src">系統依熱量及蛋白質自動帶入六大類份數（P7）</span>
-          <span class="aux"><button class="btn sm" data-act="replan">${ic('refresh','sm')}依目標重新分配</button></span></div>
-        <div class="row" style="margin-bottom:10px">
-          <div class="cell">建議熱量 kcal<input class="t" type="number" step="50" data-kind="num" data-f="kcal" value="${st.kcal}"><span class="hint">建議 ${x.sugKcal}（IBW ${x.ibw} × ${RULES.kcalFactor}）</span></div>
-          <div class="cell">蛋白質 g<input class="t" type="number" step="1" data-kind="num" data-f="protein" value="${st.protein}"><span class="hint">建議 ${x.sugProtein}（${x.band.label}，${x.band.gkg.toFixed(1)} g/kg）</span></div>
-          <div class="cell">餐次<select data-kind="num" data-f="meals">${[3,4,5,6].map(n=>`<option ${n===st.meals?'selected':''}>${n}</option>`).join('')}</select></div>
-        </div>
-        ${gridTable('plan',st.plan,showLow,lk)}
-        <div class="sum">
-          <div class="b ${cls(pl.kcal,st.kcal,0.05)}">計畫熱量<b>${pl.kcal} / ${st.kcal}</b></div>
-          <div class="b ${cls(pl.P,st.protein,0.08)}">蛋白質 g<b>${pl.P} / ${st.protein}</b></div>
-          <div class="b ${pl.pct.carb>=45&&pl.pct.carb<=60?'ok':'warn'}">醣類<b>${pl.pct.carb}%</b></div>
-          <div class="b ${pl.pct.fat<=35?'ok':'warn'}">脂肪<b>${pl.pct.fat}%</b></div>
-        </div></div>
+      ${planBlock(c,st,x,lk,showLow,'系統依熱量及蛋白質自動帶入六大類份數（P7）')}
+      ${ncpBlock(c,st,x,lk,'比照門診，下拉選單；回寫 HIS 備註')}
     </div>
 
     <div class="hisprev"><div class="hp-h">${ic('upload','sm')}回寫 HIS 備註欄的內容預覽</div>
@@ -1002,6 +1085,8 @@ function renderVisit(c, st, x){
 function hisNote(c,st,x){
   const parts=[st.note1.trim()];
   if(!isEmpty(st.recall)) parts.push(`飲食紀錄：目前攝取 ${x.intake.kcal} 大卡（蛋白質 ${x.intake.P} g、脂肪 ${x.intake.F} g、醣類 ${x.intake.C} g）；建議 ${st.kcal} 大卡、蛋白質 ${st.protein} g、${st.meals} 餐。`);
+  if(st.supps.recall.length) parts.push(`營養品：${st.supps.recall.map(r=>`${suppOf(r.id).name} ${r.n} ${suppOf(r.id).unit}`).join('、')}（已計入攝取量）。`);
+  const nn=st.ncp.filter(n=>n.P); if(nn.length) parts.push('營養診斷：'+nn.map(n=>`${n.P}，${n.E||'—'}${n.S?`（${n.S}）`:''}`).join('；'));
   if(st.supplement.trim()) parts.push(st.supplement.trim());
   return parts.join('\n');
 }
@@ -1020,7 +1105,7 @@ function renderFlyerTab(c, st, x){
     :`<div class="gate">${ic('lock')}<div><b>需先確認營養師訪視紀錄</b>衛教單張要使用營養師訪視後的飲食紀錄（P9 產出）作為輸入。</div><button class="btn te" data-act="tab" data-t="visit">前往營養師訪視紀錄</button></div>`);
   if(st.f2==='none') return head+`<div class="gate go">${ic('sparkles')}<div><b>輸入已備妥</b>${inChips}<br>建議 ${st.kcal} 大卡、蛋白質 ${st.protein} g；目前攝取 ${x.intake.kcal} 大卡。</div><button class="btn te lg" data-act="gen2">${ic('sparkles','sm')}AI 產生衛教單張</button></div>`;
   const f=st.flyer, saved=st.f2==='saved', lockF=saved||st.f2==='review';
-  const box=saved?`<div class="t"><b>✓ ${opd?'病人已簽名，':''}已回寫 HIS 存檔為病歷 ${st.savedAt}</b>病人可掃描 QR Code 在手機上查看本單張。</div><button class="btn" data-act="unsave">撤回</button>`
+  const box=saved?`<div class="t"><b>✓ ${opd?'病人已簽名，':''}已回寫 HIS 存檔為病歷 ${st.savedAt}</b>病人可掃描 QR Code 在手機上查看本單張。</div>${opd?'':'<button class="btn" data-act="unsave">撤回</button>'}`
     :st.f2==='review'?`<div class="t"><b>✓ 營養師已審視，待病人簽名</b>請病人簽名後回寫 HIS 存檔。</div><button class="btn" data-act="back-edit">返回修改</button><button class="btn te lg" data-act="tab" data-t="sign">${ic('sign','sm')}前往病人簽名</button>`
     :`<div class="t"><b>請審視單張內容</b>${opd?'審視完成後請病人簽名，再回寫 HIS 存檔為本次門診紀錄的一部分。':'確認後回寫 HIS，存檔為本次營養照護紀錄的一部分。'}</div><button class="btn ai" data-act="gen2">${ic('refresh','sm')}重新產生</button>`
       +(opd?`<button class="btn pri lg" data-act="save2">${ic('sign','sm')}審視完成，請病人簽名</button>`:`<button class="btn pri lg" data-act="save2">${ic('upload','sm')}審視完成，回寫 HIS 存檔</button>`);
@@ -1080,7 +1165,7 @@ const NCP_P={
 const NCP_E=['進食量不足','早餐僅吃堅果，水果攝取過多','經常外食，炒麵等高油餐點多','缺乏醣類代換知識','腎功能下降，蛋白質需求改變','缺乏運動習慣','食慾不佳'];
 function ncpS(c,st,x){ const pct=st.kcal?Math.round(x.intake.kcal/st.kcal*100):0;
   return [x.intake.kcal?`攝取 ${x.intake.kcal} 大卡，約建議量 ${pct}%`:'',x.intake.kcal?`脂肪佔熱量 ${x.intake.pct.fat}%`:'',x.intake.kcal?`蛋白質攝取 ${x.intake.P} g／建議 ${st.protein} g`:'',
-    `HbA1c ${lab(c,'HbA1C')?.value}%、AC ${lab(c,'AC')?.value}`,`BMI ${x.bmi}`,x.egfr?`eGFR ${Math.round(x.egfr)}`:'',`每週運動 ${st.life.運動.freq??0} 次`].filter(Boolean); }
+    `HbA1c ${lab(c,'HbA1C')?.value}%、AC ${lab(c,'AC')?.value}`,`BMI ${x.bmi}`,x.egfr?`eGFR ${Math.round(x.egfr)}`:'',st.life?`每週運動 ${st.life.運動.freq??0} 次`:''].filter(Boolean); }
 // 營養師完成門診紀錄的示範內容（取自營養部營養評估單）
 const OPD_DEMO={
   A:{ncp:[['NI','NI-1.2 熱量攝取不足','進食量不足',0]],learn:['可','可','普通了解','有意願執行力可'],interv:['糖尿病','食物代換','低血糖處理','營養品補充']},
@@ -1089,14 +1174,15 @@ const OPD_DEMO={
 const INTERV=['飲食原則指導','均衡飲食、食物類別','限制熱量','糖尿病','高血壓','高脂血症','外食','低蛋白','限磷','限鉀','減重飲食','份數設計','食物代換','點心的補充','低血糖處理','透析飲食原則','營養品補充'];
 const INTERV_NEW=['透析飲食原則','營養品補充'];
 const PG_INTAKE=[['無改變或比平常多',0],['比平常少：正常食物但量少',1],['比平常少：少量固體食物',2],['比平常少：只有液體或營養補充品',3],['比平常少：非常少量',4]];
-const PG_SYM=[['沒有食慾',3],['噁心',1],['嘔吐',3],['便秘',1],['腹瀉',3],['口腔潰瘍',2],['口乾',1],['味覺改變',1],['聞到味道不舒服',1],['吞嚥困難',2],['很快有飽足感',1],['疼痛',3],['其他',1]];
+const PG_SYM=[['無',0],['沒有食慾',3],['噁心',1],['嘔吐',3],['便秘',1],['腹瀉',3],['口腔潰瘍',2],['口乾',1],['味覺改變',1],['聞到味道不舒服',1],['吞嚥困難',2],['很快有飽足感',1],['疼痛',3],['其他',1]];
 const PG_ACT=[['正常，無限制',0],['不太正常，但能正常活動',1],['不想活動，臥床或坐著少於半天',2],['能做少量活動，大部分時間臥床或坐著',3],['幾乎整天臥床',3]];
 function pgScore(st){ const p=st.extra.pg, w0=+p.wt0; let b1=0;
   if(w0>0&&st.wt<w0){ const l=(w0-st.wt)/w0*100; b1=l>=10?4:l>=5?3:l>=3?2:l>=2?1:0; }
   if(p.wDown) b1+=1;
   const b2=PG_INTAKE[p.intake][1], b3=p.sym.reduce((s,n)=>s+(PG_SYM.find(y=>y[0]===n)?.[1]||0),0), b4=PG_ACT[p.act][1], t=b1+b2+b3+b4;
   return {b1,b2,b3,b4,t,tri:t<=1?'目前不需介入，治療期間定期再評估':t<=3?'由營養師提供病人及家屬衛教':t<=8?'需營養師介入，並依症狀會同醫護處理':'急需改善症狀及營養介入'}; }
-const pdKcal = st => { const v=parseFloat(st.extra.pdVol); return v>0?Math.round(v*parseFloat(st.extra.pdConc)*10*0.6*3.4):0; };  // 葡萄糖約吸收 60%，3.4 kcal/g
+const pdRowKcal = r => { const v=parseFloat(r.vol), m=/葡萄糖 ([\d.]+)%/.exec(r.type); return v>0&&m?Math.round(v*parseFloat(m[1])*10*0.6*3.4):0; };  // 葡萄糖約吸收 60%，3.4 kcal/g；Extraneal 換算待院方提供
+const pdKcal = st => st.extra.pdRows.reduce((s,r)=>s+pdRowKcal(r),0);
 
 const newTag='<span class="newtag">PPT 新增</span>';
 const fSel=(st,f,opts,lab)=>`<select data-kind="set" data-f="${f}"${lab?` aria-label="${lab}"`:''}>${opts.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o]; return `<option value="${esc(v)}" ${String(getPath(st,f))===String(v)?'selected':''}>${esc(t)}</option>`;}).join('')}</select>`;
@@ -1104,7 +1190,9 @@ const fChk=(st,f,opts,isNew=[])=>`<div class="goals">${opts.map(o=>{const on=get
 
 function renderClinicExtra(c, st){
   const k=st.clinic, e=st.extra;
-  if(k.startsWith('糖尿病')||k==='帕金森氏症'||k==='其他') return '';
+  if(k.startsWith('糖尿病')||k==='慢性腎臟病門診'||k==='其他') return '';
+  if(k==='帕金森氏症') return `<div class="inblk typeblk"><div class="ih"><b>帕金森氏症專屬欄位</b>${newTag}<span class="ihn">分期以 Hoehn-Yahr 示意，院內採用的分期標準待確認</span></div>
+      <div class="row"><div class="cell">分期${fSel(st,'extra.pkStage',HY,'帕金森分期')}</div></div></div>`;
   const head=t=>`<div class="inblk typeblk"><div class="ih"><b>${t}</b>${newTag}<span class="ihn">示範個案為糖尿病門診，此門診種類沒有實際資料，欄位僅示意</span></div>`;
   const blank=`<div class="fld"><div class="lbl">病人相關資料（空白欄，自行輸入）</div><textarea data-kind="text" data-f="extra.note" rows="2" placeholder="${k==='癌症營養門診'?'例：診斷日期、目前療程…':'例：諮詢原因、GDM 的妊娠階段…'}">${esc(e.note)}</textarea></div>`;
   if(k==='自費門診'||k==='高檢') return head(`${k}專屬欄位（P9）`)+blank+'</div>';
@@ -1116,14 +1204,17 @@ function renderClinicExtra(c, st){
       <div class="cell">本次脫水量<span class="ro">${pre&&post?r1(pre-post)+' kg':'—'}</span></div>
       <div class="cell">透析後與乾體重差<span class="ro">${post&&dry?r1(post-dry)+' kg':'—'}</span></div></div></div>`; }
   if(k==='腹膜透析'){ const kc=pdKcal(st);
-    return head('腹膜透析專屬欄位（P11）')+`<div class="row">
-      <div class="cell">透析液濃度${fSel(st,'extra.pdConc',['1.5%','2.5%','4.25%'],'透析液濃度')}</div>
-      <div class="cell">每日用量 L<input class="t" type="number" step="0.5" data-kind="set" data-f="extra.pdVol" value="${e.pdVol}"></div>
-      <div class="cell">透析液吸收熱量<span class="ro">${kc?kc+' 大卡':'—'}</span><span class="hint">葡萄糖吸收約 60% × 3.4 kcal/g；自動加入整日攝取量</span></div></div></div>`; }
+    const rows=e.pdRows.map((r,i)=>`<div class="row pdrow"><div class="cell">藥水 ${i+1}${fSel(st,`extra.pdRows.${i}.type`,PD_TYPES,'透析藥水')}</div>
+        <div class="cell">每日用量 L<input class="t" type="number" step="0.5" data-kind="set" data-f="extra.pdRows.${i}.vol" value="${esc(r.vol)}"></div>
+        <div class="cell">吸收熱量<span class="ro">${/Extraneal/.test(r.type)?'待院方提供換算':pdRowKcal(r)?pdRowKcal(r)+' 大卡':'—'}</span></div>
+        ${e.pdRows.length>1?`<div class="cell"><button class="pend" data-act="pd-del" data-i="${i}">移除</button></div>`:''}</div>`).join('');
+    return head('腹膜透析專屬欄位（P11）')+rows+`<div class="row"><div class="cell"><button class="btn sm" data-act="pd-add">${ic('plus','sm')}新增藥水（可同時使用 2 種以上）</button></div>
+      <div class="cell">葡萄糖透析液吸收熱量合計<span class="ro">${kc?kc+' 大卡':'—'}</span><span class="hint">葡萄糖吸收約 60% × 3.4 kcal/g；自動加入整日攝取量</span></div></div></div>`; }
   if(k==='癌症營養門診'){ const p=e.pg, s=pgScore(st);
     return head('癌症營養門診專屬欄位（P12）')+blank+`
       <div class="fld"><div class="lbl">目前治療方式（可複選）</div>${fChk(st,'extra.tx',['電療','化療','標靶'])}</div>
-      <div class="fld"><div class="lbl">轉介原因</div>${fChk(st,'extra.ref',['癌症飲食衛教','體重下降','癌症治療間攝食下降','保健食品詢問','灌食配方','其他'])}</div>
+      <div class="fld"><div class="lbl">轉介原因</div>${fChk(st,'extra.ref',['癌症飲食衛教','體重下降','癌症治療間攝食下降','保健食品詢問','灌食配方','其他'])}
+        ${e.ref.includes('其他')?`<input class="t" type="text" style="margin-top:8px;width:100%" data-kind="text" data-f="extra.refOther" value="${esc(e.refOther)}" placeholder="其他轉介原因（自行輸入）">`:''}</div>
       <div class="fld"><div class="lbl">整體營養狀況評估（Scored PG-SGA）<span class="src">示範：病人自填部分 Box 1–4，完整量表格式待院方提供</span></div>
         <div class="pg">
           <div class="pgb"><b>1. 體重</b><div class="row"><div class="cell">目前 kg<span class="ro">${st.wt}</span></div><div class="cell">1 個月前 kg<input class="t" type="number" step="0.1" data-kind="set" data-f="extra.pg.wt0" value="${p.wt0}"></div>
@@ -1142,8 +1233,7 @@ function renderOrec(c, st, x){
   const showLow=x.ckdLow||Object.values(st.plan).some(m=>m.lowN);
   const dates=[...new Set(c.labs.filter(r=>r.date<=sh.date).map(r=>r.date))].sort().reverse();
   const labRows=c.labs.filter(r=>r.date===st.labDate&&typeof r.value==='number');
-  const labs=['HbA1C','AC','PC','Cr','eGFR','BUN','GOT','GPT','CHOL','TG','LDL-C','HDL-C','UACR'].map(k=>labRows.find(r=>r.key===k)).filter(Boolean)
-    .map(r=>`<span class="lv"><small>${r.key}</small><b>${r.value}</b></span>`).join('')||'<span class="ihn">此日期無常規檢驗項目</span>';
+  const labs=labRows.length?labTiles(c,LAB_PRI[st.clinic]||LAB_PRI['糖尿病門診'],k=>labRows.find(r=>r.key===k),`依「${st.clinic}」優先排序，示意（待院方確認）`):'<span class="ihn">此日期無常規檢驗項目</span>';
   const nLab=c.labs.filter(r=>r.src==='HIS檢驗').length;
   const rows=[
     ['病人診斷','主診斷系統帶入；糖尿病門診由醫令帶入 LDM1–LDM5（P4–P7）','衛教中心「相關疾病」勾選＋由 Cr 推算 CKD 分期；LDM 取自營養評估單標示','part','未提供醫令資料'],
@@ -1152,23 +1242,21 @@ function renderOrec(c, st, x){
     ['門診用藥','系統帶入最近一筆門診用藥（P6）','衛教中心「藥物史」勾選','part','只有藥物類別，無處方明細'],
     ['抽菸／喝酒／檳榔／運動','新增欄位（P4–P12）',`衛教中心個管紀錄（${roc(lastVisit(c).date)}）`,'ok',''],
   ];
-  const ncp=st.ncp.map((n,i)=>`<div class="ncp"><div class="ncph">主診斷 ${i+1}${i?` <button class="pend" data-act="ncp-del" data-i="${i}">移除</button>`:''}</div>
-      <div class="ncpg"><div class="cell">類別${fSel(st,`ncp.${i}.cat`,[['','請選擇'],...Object.entries(NCP_CAT)])}</div>
-      <div class="cell">P（診斷）${fSel(st,`ncp.${i}.P`,[['','請選擇'],...(NCP_P[n.cat]||[])])}</div>
-      <div class="cell">E（病因）${fSel(st,`ncp.${i}.E`,[['','請選擇'],...NCP_E])}</div>
-      <div class="cell">S（病徵）${fSel(st,`ncp.${i}.S`,[['','請選擇'],...new Set([...ncpS(c,st,x),...(n.S?[n.S]:[])])])}</div></div></div>`).join('');
   const learn=LEARN.map(([k,opts])=>`<div class="rad"><span>${k}</span>${opts.map(o=>`<label class="${st.learn[k]===o?'on':''}"><input type="radio" name="learn-${k}" value="${o}" data-kind="set" data-f="learn.${k}" ${st.learn[k]===o?'checked':''}>${o}</label>`).join('')}</div>`).join('');
   const L=st.life;
   return `
   <div class="${lk?'locked':''}">
     <div class="sech"><div><h3>${ic('clip')}<span>1. 門診營養照護紀錄</span><span class="pill">依「營養門診照護紀錄流程」P3–P8</span></h3>
       <p>系統自動帶入診斷、檢驗、用藥；營養師填寫飲食紀錄、營養診斷與衛教評估。本頁不由 AI 生成，AI 只負責下一步的衛教單張。</p></div>
-      <div class="rt"><small>個案病歷號 DEMO-${c.code}：</small><b>個案 ${c.code}</b></div></div>
+      <div class="rt"><small>個案病歷號 DEMO-${c.code}：</small><b>個案 ${c.code}</b>
+        ${lk||st.f2==='saved'?'':`<div style="margin-top:6px"><button class="btn sm" data-act="carry">${ic('refresh','sm')}帶入上次紀錄</button></div>`}</div></div>
+    ${st.carried&&!lk?`<div class="edhint">${ic('sign','sm')}已帶入上次（${roc(lastVisit(c).date)}）衛教中心紀錄的生活習慣與介入措施，可再修改。</div>`:''}
 
     <div class="row hdrow">
       <div class="cell">門診種類 ${newTag}${fSel(st,'clinic',CLINICS,'門診種類')}</div>
       <div class="cell">看診日期<span class="ro">${roc(sh.date)}</span></div>
       <div class="cell">收案醫師<span class="ro">（去識別）</span></div>
+      ${st.clinic==='糖尿病門診'?`<div class="cell">補做／預做 ${newTag}<div class="goals" style="margin-top:4px">${['補做','預做'].map(o=>`<label class="${st.dmMode===o?'on':''}"><input type="checkbox" data-kind="dm" data-v="${o}" ${st.dmMode===o?'checked':''}>${o}</label>`).join('')}</div></div>`:''}
       ${st.clinic.startsWith('糖尿病')?`<div class="cell">LDM（醫令帶入）<span class="ro">${sh.stage_label||'—'}</span>${sh.stage_label?'':'<span class="hint">本次無 LDM 醫令</span>'}</div>`:''}
     </div>
     ${renderClinicExtra(c,st)}
@@ -1179,11 +1267,14 @@ function renderOrec(c, st, x){
       <div class="use"><span>衛教單張（P8）AI 使用：</span>${srcChip('診斷','dx')}${srcChip('飲食紀錄','dt')}${srcChip('檢驗','lb')}</div></details>
 
     <div class="inblk"><div class="ih">${srcChip('診斷','dx')}<b>病人診斷與用藥</b><span class="src">系統帶入</span></div>
-      <div class="dxrow"><div><small>主診斷</small><b>${x.dg.main}</b></div><div><small>共病</small>${x.dg.dx.join('、')||'—'}</div><div><small>最近一筆門診用藥</small>${x.dg.drugs.join('、')}</div></div></div>
+      <div class="dxrow"><div><small>主診斷</small><b>${x.dg.main}</b></div><div><small>共病</small>${x.dg.dx.join('、')||'—'}</div><div><small>最近一筆門診用藥</small>${x.dg.drugs.join('、')}</div></div>
+      <div class="fld" style="margin-top:10px"><div class="lbl">病人自費藥品／鈣片（自行輸入，可從下拉選擇）${newTag}</div>
+        <input class="t" type="text" style="width:100%" list="selfpay-list" data-kind="text" data-f="selfPay" value="${esc(st.selfPay)}" placeholder="例：碳酸鈣 1 顆／日，或點選建議項目">
+        <datalist id="selfpay-list">${SELFPAY.map(o=>`<option value="${o}">`).join('')}</datalist></div></div>
 
     <div class="inblk"><div class="ih">${srcChip('檢驗','lb')}<b>生化檢驗</b><span class="src">系統帶入最近一筆</span>
       <span class="ihn" style="margin-left:auto">檢驗日期</span><span class="dsel">${fSel(st,'labDate',dates.map(d=>[d,roc(d)+(d===dates[0]?'（最近）':'')]),'檢驗日期')}</span></div>
-      <div class="lvrow">${labs}</div></div>
+      ${labs}</div>
 
     <div class="inblk"><div class="ih"><b>生活習慣</b>${newTag}<span class="src">衛教中心紀錄帶入，可修改</span></div>
       <div class="row">
@@ -1193,7 +1284,8 @@ function renderOrec(c, st, x){
         <div class="cell">運動 次/週<input class="t" type="number" min="0" max="14" data-kind="set" data-num data-f="life.運動.freq" value="${L.運動.freq??''}"></div>
         <div class="cell">每次${fSel(st,'life.運動.dur',['無運動','15分以下','15-30分','30-45分','45分以上'],'每次運動時間')}</div>
       </div>
-      <div style="margin-top:8px">${fChk(st,'life.運動.types',['有氧運動','無氧運動','伸展運動'])}</div></div>
+      <div style="margin-top:8px">${fChk(st,'life.運動.types',['有氧運動','無氧運動','伸展運動'])}</div>
+      <div class="fld" style="margin-top:8px"><div class="lbl">運動種類（自行輸入）${newTag}</div><input class="t" type="text" style="width:100%" data-kind="text" data-f="life.運動.other" value="${esc(L.運動.other||'')}" placeholder="例：快走、游泳、太極拳…"></div></div>
 
     <div class="inblk"><div class="ih">${srcChip('飲食紀錄','dt')}<b>飲食攝取評估</b><span class="src">營養師</span><span class="hintx">→ 衛教單張的輸入</span>
         ${lk?'':'<button class="pend" data-act="fill" style="margin-left:auto">帶入示範門診資料</button>'}</div>
@@ -1205,27 +1297,14 @@ function renderOrec(c, st, x){
         <textarea data-kind="text" data-f="dietText" data-req rows="3" class="${st.dietText.trim()?'':'req'}" placeholder="自行輸入：三餐與點心內容、份量、外食情形…">${esc(st.dietText)}</textarea></div>
       <div class="fld"><div class="lbl">六大類實際攝取（份） *</div>
         ${gridTable('recall',st.recall,Object.values(st.recall).some(m=>m.lowN),lk)}
+        ${suppBox('recall',st,lk)}
         <div class="totrow"><span class="tl">熱量總計 · 實際攝取量</span>
-          <span>熱量<b>${ib.kcal}</b>大卡</span><span>蛋白質<b>${ib.P}</b>克</span><span>脂肪<b>${ib.F}</b>克</span><span>醣類<b>${ib.C}</b>克</span>
+          <span>熱量<b>${ib.kcal}</b>大卡</span><span>蛋白質<b>${ib.P}</b>克</span><span>脂肪<b>${ib.F}</b>克</span><span>醣類<b>${ib.C}</b>克</span>${ib.sup.kcal?`<span>含營養品<b>${ib.sup.kcal}</b>大卡</span>`:''}
           ${pk?`<span>＋透析液<b>${pk}</b>大卡 = 整日<b>${r1(ib.kcal+pk)}</b>大卡</span>`:''}
           <span class="note">系統依食物代換表計算</span></div></div>
-      <div class="fld"><div class="lbl">建議攝取量 <span class="src">系統依熱量及蛋白質自動帶入六大類份數</span>
-          <span class="aux"><button class="btn sm" data-act="replan">${ic('refresh','sm')}依目標重新分配</button></span></div>
-        <div class="row" style="margin-bottom:10px">
-          <div class="cell">建議熱量 kcal<input class="t" type="number" step="50" data-kind="num" data-f="kcal" value="${st.kcal}"><span class="hint">建議 ${x.sugKcal}（IBW ${x.ibw} × ${RULES.kcalFactor}）</span></div>
-          <div class="cell">蛋白質 g<input class="t" type="number" step="1" data-kind="num" data-f="protein" value="${st.protein}"><span class="hint">建議 ${x.sugProtein}（${x.band.label}，${x.band.gkg.toFixed(1)} g/kg）</span></div>
-          <div class="cell">餐次<select data-kind="num" data-f="meals">${[3,4,5,6].map(n=>`<option ${n===st.meals?'selected':''}>${n}</option>`).join('')}</select></div>
-        </div>
-        ${gridTable('plan',st.plan,showLow,lk)}
-        <div class="sum">
-          <div class="b ${cls(pl.kcal,st.kcal,0.05)}">計畫熱量<b>${pl.kcal} / ${st.kcal}</b></div>
-          <div class="b ${cls(pl.P,st.protein,0.08)}">蛋白質 g<b>${pl.P} / ${st.protein}</b></div>
-          <div class="b ${pl.pct.carb>=45&&pl.pct.carb<=60?'ok':'warn'}">醣類<b>${pl.pct.carb}%</b></div>
-          <div class="b ${pl.pct.fat<=35?'ok':'warn'}">脂肪<b>${pl.pct.fat}%</b></div>
-        </div></div></div>
+      ${planBlock(c,st,x,lk,showLow,'系統依熱量及蛋白質自動帶入六大類份數')}</div>
 
-    <div class="inblk"><div class="ih"><b>營養診斷（NCP）</b><span class="src">比照住院系統，下拉選單</span>
-      ${st.ncp.length<2&&!lk?`<button class="btn sm" data-act="ncp-add" style="margin-left:auto">${ic('plus','sm')}新增主診斷 2</button>`:''}</div>${ncp}</div>
+    ${ncpBlock(c,st,x,lk,'比照住院系統，下拉選單')}
 
     <div class="inblk"><div class="ih"><b>病人學習狀況評估</b>${newTag}</div>${learn}</div>
 
@@ -1233,8 +1312,8 @@ function renderOrec(c, st, x){
 
     <div class="signbox ${lk?'ok':''}">
       <div class="t">${lk?`<b>✓ 門診營養紀錄已完成 ${st.f1At}</b>可產生衛教單張。`:x.pending.length?`<b>尚有 ${x.pending.length} 項待填寫</b>${x.pending.join('、')}`:'<b>可以完成</b>完成後作為 AI 產生衛教單張的輸入。'}</div>
-      ${lk?`<button class="btn" data-act="unconfirm1">重新編輯</button><button class="btn te" data-act="tab" data-t="flyer">${ic('arrow','sm')}前往衛教單張</button>`
-          :`<button class="btn pri lg" data-act="confirm1" ${x.pending.length?'disabled':''}>${ic('check','sm')}完成門診紀錄</button>`}
+      ${lk?(st.f2==='saved'?'<span class="ihn">病人已簽名，紀錄已鎖定，不可修改</span>':`<button class="btn" data-act="unconfirm1">重新編輯</button><button class="btn te" data-act="tab" data-t="flyer">${ic('arrow','sm')}前往衛教單張</button>`)
+          :`<button class="btn" data-act="stash">${ic('upload','sm')}暫存</button><button class="btn pri lg" data-act="confirm1" ${x.pending.length?'disabled':''}>${ic('check','sm')}完成門診紀錄</button>`}
     </div>
   </div>`;
 }
@@ -1255,8 +1334,8 @@ function renderSign(c, st, x){
       </div>
     </div>
     <div class="signbox ${saved?'ok':''}">
-      <div class="t">${saved?`<b>✓ 已簽名並回寫 HIS 存檔為病歷 ${st.savedAt}</b>衛教單張、QR Code 與病人簽名已存入本次門診紀錄。`:'<b>待病人簽名</b>可將平板交給病人簽名，或用滑鼠示範。'}</div>
-      ${saved?'<button class="btn" data-act="unsave">撤回</button>':'<button class="btn" data-act="back-edit">返回修改單張</button>'}</div>`;
+      <div class="t">${saved?`<b>✓ 已簽名並回寫 HIS 存檔為病歷 ${st.savedAt}</b>衛教單張、QR Code 與病人簽名已存入本次門診紀錄；簽名後不可修改。`:'<b>待病人簽名</b>可將平板交給病人簽名，或用滑鼠示範。'}</div>
+      ${saved?'':`<button class="btn" data-act="back-edit">返回修改單張</button><button class="btn" data-act="stash">${ic('upload','sm')}暫存（病人稍後簽名）</button>`}</div>`;
 }
 function initSig(st){
   const cv=$('#sigpad'); if(!cv) return;
@@ -1302,6 +1381,7 @@ function renderBar(c, st, x){
       acts=tab==='sign'?'':`<button class="btn te" data-act="tab" data-t="sign">${ic('sign','sm')}前往病人簽名</button>`;
     } else { msg=`<span class="ok"><b>✓ 已完成</b></span>　個案 ${c.code} · 病人已簽名，衛教單張已存檔為病歷 ${st.savedAt}`;
       acts=`<button class="btn" data-act="print">${ic('printer','sm')}列印</button>`; }
+    if(st.f2!=='saved'){ if(st.stashAt) msg+=`　<span style="color:var(--s500)">（已暫存 ${st.stashAt}）</span>`; acts=`<button class="btn" data-act="stash">${ic('upload','sm')}暫存</button>`+acts; }
     $('#bar').innerHTML=`<div class="in"><span class="msg">${msg}</span><div class="acts">${acts}</div></div>`;
     return;
   }
@@ -1431,15 +1511,26 @@ document.addEventListener('click', e=>{
       LEARN.forEach(([k],i)=>st.learn[k]=d.learn[i]);
       st.interv=[...d.interv];
       tab='orec'; }
-    else { if(!st.supplement.trim()) st.supplement=visitNote(c); if(tab==='input') tab='visit'; }
+    else { if(!st.supplement.trim()) st.supplement=visitNote(c); const d=OPD_DEMO[c.code], ss=ncpS(c,st,derive(c,st)); st.ncp=d.ncp.map(([cat,P,E,si])=>({cat,P,E,S:ss[si]})); if(tab==='input') tab='visit'; }
     render(); }
-  else if(act==='replan'){ const x=derive(c,st); const p=distribute(makePlan(st.kcal,st.protein,x.ckdLow),st.meals);
-    st.plan=Object.fromEntries(MEALS.map(m=>[m,clone(p[m]||{})])); render(); toast('已依目標熱量與蛋白質重新分配'); }
+  else if(act==='replan'){ replanNow(c,st); render(); toast(st.supps.plan.length?'已先扣除營養品，再依目標重新分配':'已依目標熱量與蛋白質重新分配'); }
+  else if(act==='supp-add'){ const k=b.dataset.k; st.supps[k].push({id:SUPPS[0].id,n:1}); if(k==='plan') replanNow(c,st); render(); if(k==='plan') toast('已扣除營養品熱量與蛋白質，重新分配六大類份數'); }
+  else if(act==='supp-del'){ const k=b.dataset.k; st.supps[k].splice(+b.dataset.i,1); if(k==='plan') replanNow(c,st); render(); }
+  else if(act==='labhist'){ const k=b.dataset.k, rs=series(c,k).filter(r=>r.date<=c.sheet.date), asc=rs.slice().reverse();
+    openModal(`<div class="mh">${ic('db')}${LABN[k]||k} · 歷史報告（${rs.length} 筆）</div><div class="mb">${chart(rs,{color:'#0f766e'})}
+      <div class="labscroll"><table class="labtbl"><thead><tr><th>檢驗日期</th><th>數值</th></tr></thead><tbody>${asc.map(r=>`<tr><td>${roc(r.date)}</td><td><b>${r.value}</b></td></tr>`).join('')}</tbody></table></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="close">關閉</button></div></div>`); }
   else if(act==='confirm1'){ st.f1='done'; st.f1At=nowRoc(); tab=opd?'orec':'visit'; render(); toast(opd?'門診營養紀錄已完成':'訪視紀錄已確認並更新 HIS'); }
-  else if(act==='unconfirm1'){ st.f1=opd?'todo':'his'; if(st.f2==='saved'||st.f2==='review'){ st.f2='draft'; st.savedAt=null; st.sig=null; st.sigDraft=null; } render(); }
+  else if(act==='unconfirm1'){ if(opd&&st.f2==='saved') return; st.f1=opd?'todo':'his'; if(st.f2==='saved'||st.f2==='review'){ st.f2='draft'; st.savedAt=null; st.sig=null; st.sigDraft=null; } render(); }
   else if(act==='gen2'){ runFlyerGen(c,st); }
   else if(act==='hide'){ st.flyer.on[b.dataset.f]=false; render(); }
   else if(act==='show'){ st.flyer.on[b.dataset.f]=true; render(); }
+  else if(act==='stash'){ st.stashAt=nowRoc(); render(); toast('已暫存，可從左側名單查詢目前狀態（未寫回 HIS）'); }
+  else if(act==='carry'){ const lv=lastVisit(c); st.life=clone(lv.life);
+    const EDU2INT={'飲食衛教':'飲食原則指導','認識糖尿病':'糖尿病','低血糖護理衛教':'低血糖處理'}; const m=[...new Set(lv.edu_items.map(e=>EDU2INT[e]).filter(Boolean))]; st.interv=[...new Set([...st.interv,...m])]; st.carried=true;
+    render(); toast(`已帶入 ${roc(lv.date)} 衛教中心紀錄：生活習慣、介入措施 ${m.length} 項`); }
+  else if(act==='pd-add'){ st.extra.pdRows.push({type:PD_TYPES[0],vol:''}); render(); }
+  else if(act==='pd-del'){ st.extra.pdRows.splice(+b.dataset.i,1); render(); }
   else if(act==='ncp-add'){ st.ncp.push({cat:'',P:'',E:'',S:''}); render(); }
   else if(act==='ncp-del'){ st.ncp.splice(+b.dataset.i,1); render(); }
   else if(act==='save2'&&opd){ st.f2='review'; goTab('sign'); toast('已審視，請病人簽名'); }
@@ -1450,8 +1541,8 @@ document.addEventListener('click', e=>{
       <p style="margin-top:0">衛教單張與 QR Code${opd?'、病人簽名':''}將回寫 HIS「營養教育及諮詢處置」，存檔為本次病歷。</p>
       <div class="sum" style="margin-bottom:16px"><div class="b">建議熱量<b>${st.kcal} kcal</b></div><div class="b">蛋白質<b>${st.protein} g</b></div><div class="b">教育目標<b>${st.flyer.goals.length} 項</b></div>${opd?'<div class="b ok">病人簽名<b>✓ 已簽</b></div>':''}</div>
       <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-act="close">返回修改</button><button class="btn pri" data-act="confirm-save">${ic('check','sm')}確認存檔</button></div></div>`); }
-  else if(act==='confirm-save'){ st.f2='saved'; st.savedAt=nowRoc(); if(opd) st.sig=st.sigDraft; closeModal(); tab=opd?'sign':'flyer'; render(); toast('已回寫 HIS 存檔為病歷'); }
-  else if(act==='unsave'){ st.f2=opd?'review':'draft'; st.savedAt=null; if(opd){ st.sig=null; st.sigDraft=null; } render(); }
+  else if(act==='confirm-save'){ st.f2='saved'; st.savedAt=nowRoc(); st.stashAt=null; if(opd) st.sig=st.sigDraft; closeModal(); tab=opd?'sign':'flyer'; render(); toast('已回寫 HIS 存檔為病歷'); }
+  else if(act==='unsave'){ if(opd) return; st.f2=opd?'review':'draft'; st.savedAt=null; if(opd){ st.sig=null; st.sigDraft=null; } render(); }
   else if(act==='print'){ if(tab!=='flyer'){ tab='flyer'; render(); } setTimeout(()=>window.print(),50); }
   else if(act==='close'){ closeModal(); }
 });
@@ -1461,13 +1552,20 @@ document.addEventListener('change', e=>{
   if(k==='set'){ const f=el.dataset.f; let v=el.value;
     if('num' in el.dataset || /^extra\.pg\.(intake|act)$/.test(f)) v=v===''?null:+v;
     setPath(st,f,v);
-    if(/^ncp\.\d+\.cat$/.test(f)) setPath(st,f.replace(/cat$/,'P'),''); }
+    if(/^ncp\.\d+\.cat$/.test(f)) setPath(st,f.replace(/cat$/,'P'),'');
+    if(f==='clinic'&&v!=='糖尿病門診') st.dmMode=''; }
+  else if(k==='dm'){ st.dmMode=el.checked?el.dataset.v:''; }
+  else if(k==='supp'){ const l=st.supps[el.dataset.k][+el.dataset.i]; if(el.dataset.p==='id') l.id=el.value; else l.n=Math.max(0,parseFloat(el.value)||0);
+    if(el.dataset.k==='plan'){ replanNow(c,st); toast('已扣除營養品熱量與蛋白質，重新分配六大類份數'); } }
+  else if(k==='basis'){ st.wBasis=el.value; const x=derive(c,st); st.kcal=x.sugKcal; st.protein=x.sugProtein; replanNow(c,st); toast(`已改用${x.basisLabel}計算，建議熱量與蛋白質已更新並重新分配`); }
+  else if(k==='milk'){ st.useMilk=el.checked; replanNow(c,st); toast(el.checked?'已納入奶製品，重新分配':'已不含奶製品，重新分配'); }
   else if(k==='arr'){ const a=getPath(st,el.dataset.f), v=el.dataset.v, i=a.indexOf(v);
-    if(el.checked&&i<0) a.push(v); else if(!el.checked&&i>=0) a.splice(i,1); }
+    if(el.checked&&i<0) a.push(v); else if(!el.checked&&i>=0) a.splice(i,1);
+    if(el.dataset.f==='extra.pg.sym'&&el.checked){ if(v==='無') a.splice(0,a.length,'無'); else { const j=a.indexOf('無'); if(j>=0) a.splice(j,1); } } }
   else if(k==='bool'){ setPath(st,el.dataset.f,el.checked); }
   else if(k==='recall'||k==='plan'){ const v=parseFloat(el.value); const m=st[k][el.dataset.meal];
     if(v>0) m[el.dataset.g]=v; else delete m[el.dataset.g]; }
-  else if(k==='num'){ const v=parseFloat(el.value); if(!isNaN(v)) st[el.dataset.f]=v; }
+  else if(k==='num'){ const v=parseFloat(el.value); if(!isNaN(v)) st[el.dataset.f]=v; if(el.dataset.f==='meals'){ replanNow(c,st); toast(`已依 ${st.meals} 餐重新分配`); } }
   else if(k==='goal'){ const g=el.dataset.f, gs=st.flyer.goals; if(el.checked){ if(!gs.includes(g)) gs.push(g);} else st.flyer.goals=gs.filter(x=>x!==g); }
   else if(k==='text'){ render(); return; }
   render();
