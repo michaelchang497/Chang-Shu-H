@@ -399,7 +399,7 @@ body { font-family: Inter, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
 .topbar-status { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; text-transform: uppercase; background: rgba(2,6,23,.4); border: 1px solid rgba(4,120,87,.4); color: #6ee7b7; border-radius: 6px; padding: 3px 10px; }
 .status-dot { width: 6px; height: 6px; background: #34d399; box-shadow: none; }
 
-.layout { max-width: 1280px; margin: 0 auto; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 24px; padding: 24px; }
+.layout { max-width: 1280px; margin: 0 auto; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 24px; padding: 20px 24px 24px; }
 .left-col { display: flex; flex-direction: column; gap: 20px; }
 .panel { border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1); }
 .panel h2 { font-size: 14px; font-weight: 700; color: #334155; }
@@ -454,3 +454,12 @@ body { font-family: Inter, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
 .hist-table .row-selected { background: #ecfdf5; }
 
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .seg { display: none; } }
+
+/* 標題列下方的檢視切換（與營養照護紀錄頁一致） */
+.subtabs { max-width: 1280px; margin: 12px auto 0; padding: 0 24px; }
+.subtabs-in { display: flex; gap: 16px; border-bottom: 1px solid #e2e8f0; }
+.subtabs-in button { background: none; border: none; cursor: pointer; font-family: inherit; padding: 12px 4px; font-size: 12px; font-weight: 700; color: #94a3b8; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: .15s; }
+.subtabs-in button:hover { color: #64748b; }
+.subtabs-in button.on { color: #065f46; border-bottom-color: #059669; }
+.hist-page { max-width: 1280px; margin: 0 auto; padding: 20px 24px 24px; }
+.hist-panel { padding: 0; }

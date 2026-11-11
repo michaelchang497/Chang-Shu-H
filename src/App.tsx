@@ -17,7 +17,8 @@ function statusLabel(status: 'normal' | 'high' | 'low') {
   return { text: '正常', cls: 'status-normal' };
 }
 
-type Tab = 'trend' | 'education' | 'signoff' | 'history';
+type Tab = 'trend' | 'education' | 'signoff';
+type View = 'care' | 'history';
 
 function buildDefaultRemarks(
   checked: Set<EducationTopicId>,
@@ -38,6 +39,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [checkedTopics, setCheckedTopics] = useState<Set<EducationTopicId>>(new Set());
   const [tab, setTab] = useState<Tab>('trend');
+  const [view, setView] = useState<View>('care');
   const [importedFromHis, setImportedFromHis] = useState(false);
   const [educatorSig, setEducatorSig] = useState<string | null>(null);
   const [patientSig, setPatientSig] = useState<string | null>(null);
@@ -210,6 +212,144 @@ export default function App() {
         </div>
       </header>
 
+      <div className="subtabs">
+        <div className="subtabs-in">
+          <button className={view === 'care' ? 'on' : ''} onClick={() => setView('care')}>
+            衛教作業
+          </button>
+          <button
+            className={view === 'history' ? 'on' : ''}
+            onClick={() => {
+              setView('history');
+              setHSelected(null);
+              setHResults(queryRecords(allRecords, hq));
+            }}
+          >
+            歷史紀錄查詢
+          </button>
+        </div>
+      </div>
+
+      {view === 'history' ? (
+        <main className="hist-page">
+          <section className="panel hist-panel">
+            <div className="tab-body hist-body">
+                <h2>衛教紀錄查詢</h2>
+                <div className="hist-filters">
+                  <label>
+                    病歷號碼
+                    <input
+                      value={hq.patientId}
+                      onChange={(e) => setHq({ ...hq, patientId: e.target.value })}
+                      onKeyDown={(e) => e.key === 'Enter' && runHistorySearch()}
+                      placeholder="不填＝全部病歷"
+                    />
+                  </label>
+                  <label>
+                    衛教日期 起
+                    <input type="date" value={hq.from} onChange={(e) => setHq({ ...hq, from: e.target.value })} />
+                  </label>
+                  <label>
+                    迄
+                    <input type="date" value={hq.to} onChange={(e) => setHq({ ...hq, to: e.target.value })} />
+                  </label>
+                  <button className="primary-btn" onClick={() => runHistorySearch()}>查詢</button>
+                  <button
+                    className="link-btn"
+                    onClick={() => {
+                      const cleared = { patientId: '', from: '', to: '' };
+                      setHq(cleared);
+                      runHistorySearch(cleared);
+                    }}
+                  >
+                    清除條件
+                  </button>
+                </div>
+  
+                {hResults && hResults.length === 0 && <p className="placeholder">查無符合條件的衛教紀錄。</p>}
+                {hResults && hResults.length > 0 && (
+                  <>
+                    <p className="hint">共 {hResults.length} 筆（同一病歷號可有多筆，依日期由新到舊）</p>
+                    <table className="lab-table hist-table">
+                      <thead>
+                        <tr>
+                          <th>衛教日期</th>
+                          <th>病歷號碼</th>
+                          <th>姓名</th>
+                          <th>衛教師</th>
+                          <th>衛教主題</th>
+                          <th>簽名</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hResults.map((r) => (
+                          <tr key={r.id} className={hSelected?.id === r.id ? 'row-selected' : ''}>
+                            <td>{r.date} {r.time}</td>
+                            <td>{r.patientId}</td>
+                            <td>{r.patientName}</td>
+                            <td>{r.educator}</td>
+                            <td>{r.topics.length} 項</td>
+                            <td>{r.id.startsWith('sess_seed') || (r.educatorSig && r.patientSig) ? '✓ 雙方已簽' : '—'}</td>
+                            <td>
+                              <button className="link-btn" onClick={() => setHSelected(r)}>查看</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+  
+                {hSelected && (
+                  <div className="writeback-preview hist-detail">
+                    <div className="completion-title">
+                      {hSelected.patientName}（{hSelected.patientId}）　{hSelected.date} {hSelected.time}
+                    </div>
+                    <div className="writeback-label">衛教項目（{hSelected.topics.length} 項）</div>
+                    <div className="topic-chip-row">
+                      {hSelected.topics.map((id) => (
+                        <span key={id} className="topic-chip">{labelById.get(id) ?? id}</span>
+                      ))}
+                    </div>
+                    <div className="writeback-label">個案認知與遵從度評估</div>
+                    <div className="topic-chip-row">
+                      {ASSESSMENT_FIELDS.filter((f) => hSelected.assessments[f.id]).map((f) => (
+                        <span key={f.id} className="topic-chip assessment-chip">
+                          {f.label}：{hSelected.assessments[f.id]}
+                        </span>
+                      ))}
+                      {ASSESSMENT_FIELDS.every((f) => !hSelected.assessments[f.id]) && (
+                        <span className="placeholder">未評估</span>
+                      )}
+                    </div>
+                    {hSelected.nextFocus && (
+                      <>
+                        <div className="writeback-label">下次需加強的項目</div>
+                        <div className="next-focus-preview">{hSelected.nextFocus}</div>
+                      </>
+                    )}
+                    {hSelected.remarks && (
+                      <>
+                        <div className="writeback-label">備註</div>
+                        <pre className="hist-remarks">{hSelected.remarks}</pre>
+                      </>
+                    )}
+                    <div className="writeback-label">簽名檔</div>
+                    {hSelected.educatorSig && hSelected.patientSig ? (
+                      <div className="signature-row">
+                        <div><img className="hist-sig" src={hSelected.educatorSig} alt="衛教師簽名" /><div className="hint">衛教師</div></div>
+                        <div><img className="hist-sig" src={hSelected.patientSig} alt="患者簽名" /><div className="hint">患者／家屬</div></div>
+                      </div>
+                    ) : (
+                      <p className="hint">衛教師 ✓ ／ 病患或家屬 ✓（示意資料，無簽名圖檔）</p>
+                    )}
+                  </div>
+                )}
+              </div>
+          </section>
+        </main>
+      ) : (
       <main className="layout">
         <div className="left-col">
         <section className="panel search-panel">
@@ -291,21 +431,9 @@ export default function App() {
             <button className={tab === 'signoff' ? 'tab active' : 'tab'} onClick={() => setTab('signoff')}>
               <svg viewBox="0 0 24 24" className="tab-ic"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg> 電子流程簽名與發放
             </button>
-            <button
-              className={tab === 'history' ? 'tab active' : 'tab'}
-              onClick={() => {
-                setTab('history');
-                const next = { ...hq, patientId: hq.patientId || patient?.id || '' };
-                setHq(next);
-                setHResults(queryRecords(allRecords, next));
-                setHSelected(null);
-              }}
-            >
-              <svg viewBox="0 0 24 24" className="tab-ic"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg> 衛教紀錄查詢
-            </button>
           </div>
 
-          {!patient && tab !== 'history' && <p className="placeholder">請先於左側查詢病患以載入檢驗指標。</p>}
+          {!patient && <p className="placeholder">請先於左側查詢病患以載入檢驗指標。</p>}
 
           {patient && tab === 'trend' && (
             <div className="tab-body">
@@ -416,123 +544,6 @@ export default function App() {
                   );
                 })}
               </ul>
-            </div>
-          )}
-
-          {tab === 'history' && (
-            <div className="tab-body">
-              <h2>衛教紀錄查詢</h2>
-              <div className="hist-filters">
-                <label>
-                  病歷號碼
-                  <input
-                    value={hq.patientId}
-                    onChange={(e) => setHq({ ...hq, patientId: e.target.value })}
-                    onKeyDown={(e) => e.key === 'Enter' && runHistorySearch()}
-                    placeholder="不填＝全部病歷"
-                  />
-                </label>
-                <label>
-                  衛教日期 起
-                  <input type="date" value={hq.from} onChange={(e) => setHq({ ...hq, from: e.target.value })} />
-                </label>
-                <label>
-                  迄
-                  <input type="date" value={hq.to} onChange={(e) => setHq({ ...hq, to: e.target.value })} />
-                </label>
-                <button className="primary-btn" onClick={() => runHistorySearch()}>查詢</button>
-                <button
-                  className="link-btn"
-                  onClick={() => {
-                    const cleared = { patientId: '', from: '', to: '' };
-                    setHq(cleared);
-                    runHistorySearch(cleared);
-                  }}
-                >
-                  清除條件
-                </button>
-              </div>
-
-              {hResults && hResults.length === 0 && <p className="placeholder">查無符合條件的衛教紀錄。</p>}
-              {hResults && hResults.length > 0 && (
-                <>
-                  <p className="hint">共 {hResults.length} 筆（同一病歷號可有多筆，依日期由新到舊）</p>
-                  <table className="lab-table hist-table">
-                    <thead>
-                      <tr>
-                        <th>衛教日期</th>
-                        <th>病歷號碼</th>
-                        <th>姓名</th>
-                        <th>衛教師</th>
-                        <th>衛教主題</th>
-                        <th>簽名</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hResults.map((r) => (
-                        <tr key={r.id} className={hSelected?.id === r.id ? 'row-selected' : ''}>
-                          <td>{r.date} {r.time}</td>
-                          <td>{r.patientId}</td>
-                          <td>{r.patientName}</td>
-                          <td>{r.educator}</td>
-                          <td>{r.topics.length} 項</td>
-                          <td>{r.id.startsWith('sess_seed') || (r.educatorSig && r.patientSig) ? '✓ 雙方已簽' : '—'}</td>
-                          <td>
-                            <button className="link-btn" onClick={() => setHSelected(r)}>查看</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
-
-              {hSelected && (
-                <div className="writeback-preview hist-detail">
-                  <div className="completion-title">
-                    {hSelected.patientName}（{hSelected.patientId}）　{hSelected.date} {hSelected.time}
-                  </div>
-                  <div className="writeback-label">衛教項目（{hSelected.topics.length} 項）</div>
-                  <div className="topic-chip-row">
-                    {hSelected.topics.map((id) => (
-                      <span key={id} className="topic-chip">{labelById.get(id) ?? id}</span>
-                    ))}
-                  </div>
-                  <div className="writeback-label">個案認知與遵從度評估</div>
-                  <div className="topic-chip-row">
-                    {ASSESSMENT_FIELDS.filter((f) => hSelected.assessments[f.id]).map((f) => (
-                      <span key={f.id} className="topic-chip assessment-chip">
-                        {f.label}：{hSelected.assessments[f.id]}
-                      </span>
-                    ))}
-                    {ASSESSMENT_FIELDS.every((f) => !hSelected.assessments[f.id]) && (
-                      <span className="placeholder">未評估</span>
-                    )}
-                  </div>
-                  {hSelected.nextFocus && (
-                    <>
-                      <div className="writeback-label">下次需加強的項目</div>
-                      <div className="next-focus-preview">{hSelected.nextFocus}</div>
-                    </>
-                  )}
-                  {hSelected.remarks && (
-                    <>
-                      <div className="writeback-label">備註</div>
-                      <pre className="hist-remarks">{hSelected.remarks}</pre>
-                    </>
-                  )}
-                  <div className="writeback-label">簽名檔</div>
-                  {hSelected.educatorSig && hSelected.patientSig ? (
-                    <div className="signature-row">
-                      <div><img className="hist-sig" src={hSelected.educatorSig} alt="衛教師簽名" /><div className="hint">衛教師</div></div>
-                      <div><img className="hist-sig" src={hSelected.patientSig} alt="患者簽名" /><div className="hint">患者／家屬</div></div>
-                    </div>
-                  ) : (
-                    <p className="hint">衛教師 ✓ ／ 病患或家屬 ✓（示意資料，無簽名圖檔）</p>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -658,6 +669,7 @@ export default function App() {
           )}
         </section>
       </main>
+      )}
     </div>
   );
 }
