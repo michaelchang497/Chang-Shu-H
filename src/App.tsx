@@ -17,6 +17,9 @@ function statusLabel(status: 'normal' | 'high' | 'low') {
   return { text: '正常', cls: 'status-normal' };
 }
 
+// 營養部（舊版頁面 legacy.html）先隱藏；要恢復時改成 true
+const SHOW_NUTRITION_DEPT = false;
+
 type Tab = 'trend' | 'education' | 'signoff';
 type View = 'care' | 'history';
 
@@ -193,10 +196,12 @@ export default function App() {
             <svg viewBox="0 0 24 24" className="seg-ic"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
             衛教中心
           </span>
-          <a className="seg-item" href="legacy.html#nutritionist">
-            <svg viewBox="0 0 24 24" className="seg-ic"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
-            營養部
-          </a>
+          {SHOW_NUTRITION_DEPT && (
+            <a className="seg-item" href="legacy.html#nutritionist">
+              <svg viewBox="0 0 24 24" className="seg-ic"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+              營養部
+            </a>
+          )}
           <a className="seg-item" href="nutrition.html">
             <svg viewBox="0 0 24 24" className="seg-ic"><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg>
             營養照護紀錄

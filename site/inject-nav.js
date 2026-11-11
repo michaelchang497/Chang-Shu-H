@@ -26,6 +26,8 @@
       a.innerHTML = ICON + '<span>營養照護紀錄</span><span style="margin-left:6px;font-size:9px;line-height:14px;padding:0 4px;border-radius:4px;background:#34d399;color:#022c22;font-family:\'JetBrains Mono\',monospace">NEW</span>';
       group.appendChild(a);
     }
+    // 營養部先隱藏（要恢復時移除這一行）
+    nutri.style.display = 'none';
     // 舊版的「衛教中心」分頁已由新版（index.html）取代，點擊改為回到新版首頁
     var edu = tabButton('衛教中心');
     if (edu && !edu.hasAttribute('data-to-home')) {
