@@ -497,6 +497,37 @@ textarea.typing{border-color:var(--te600)!important;box-shadow:0 0 0 3px rgba(13
 .fsig img{height:56px;width:auto;max-width:150px;display:block;border-bottom:1px solid var(--s300)}
 @media (max-width:900px){.sigwrap{grid-template-columns:1fr}.sigside{position:static}.ncpg{grid-template-columns:1fr 1fr}}
 
+/* ---------- 歷史紀錄查詢 ---------- */
+.hwrap{max-width:1280px;margin:0 auto;padding:24px 24px 60px}
+.hbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.hbar h2{margin:0;font-size:16px;font-weight:700;color:var(--s800);display:flex;align-items:center;gap:8px}
+.hbar h2 .ic{color:var(--em600)}
+.hbar .sp{margin-left:auto}
+.hmode{display:inline-flex;background:var(--s100);border-radius:10px;padding:3px}
+.hmode button{all:unset;cursor:pointer;padding:5px 14px;border-radius:8px;font-size:12px;font-weight:700;color:var(--s500)}
+.hmode button.on{background:#fff;color:var(--te800);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.hfilters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:14px;margin-bottom:14px}
+.hfilters label{display:flex;flex-direction:column;gap:3px;font-size:10.5px;font-weight:600;color:var(--s500)}
+.hfilters input,.hfilters select{border:1px solid var(--s200);border-radius:8px;padding:6px 8px;background:#fff;font-size:12px;color:var(--s800)}
+.htblw{overflow-x:auto}
+.htbl{width:100%;border-collapse:collapse;font-size:12px}
+.htbl th{background:var(--s50);color:var(--s500);font-size:10.5px;text-align:left;padding:9px 12px;border-bottom:1px solid var(--s200);white-space:nowrap}
+.htbl td{padding:10px 12px;border-bottom:1px solid var(--s100);vertical-align:middle;white-space:nowrap}
+.htbl tbody tr{cursor:pointer}
+.htbl tbody tr:hover{background:var(--te50)}
+.dbd{font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;display:inline-block}
+.dbd.ok{background:var(--em100);color:var(--em800)}
+.dbd.no{background:var(--s100);color:var(--s400)}
+.hempty{padding:40px;text-align:center;color:var(--s400);font-size:12.5px}
+.hsrc{font-size:10.5px;color:var(--s500)}
+.hnote{border:1px solid var(--am200);background:var(--am50);color:var(--am800);border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:14px}
+.hhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--s100)}
+.hhead .ti{font-size:14px;font-weight:700;color:var(--s800)}
+.hhead .ac{margin-left:auto;display:flex;gap:8px}
+.hbody{padding:20px 24px}
+.hbody .inblk{margin-bottom:14px}
+.hline{display:flex;flex-wrap:wrap;gap:18px;font-size:12px;color:var(--s700)}
+.hline small{display:block;font-size:10px;color:var(--s400);font-weight:600}
 @media (max-width:1100px){.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:1024px){.wrap{grid-template-columns:1fr}}
 @media (max-width:760px){
@@ -523,7 +554,8 @@ textarea.typing{border-color:var(--te600)!important;box-shadow:0 0 0 3px rgba(13
   <div class="seg">
     <a href="./#educator"><svg class="ic sm" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>衛教中心</a>
     <a href="./#nutritionist"><svg class="ic sm" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>營養部</a>
-    <a class="on" href="nutrition.html"><svg class="ic sm" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>營養照護紀錄<span class="new">NEW</span></a>
+    <a class="on" id="nv-care" href="#" data-act="view" data-v="care"><svg class="ic sm" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>營養照護紀錄<span class="new">NEW</span></a>
+    <a id="nv-hist" href="#" data-act="view" data-v="history"><svg class="ic sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>歷史紀錄查詢<span class="new">NEW</span></a>
   </div>
   <div class="nav-r">
     <div class="nav-user"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="rd" value="示範 臨床營養師" aria-label="營養師姓名"></div>
@@ -536,6 +568,7 @@ textarea.typing{border-color:var(--te600)!important;box-shadow:0 0 0 3px rgba(13
   <aside class="lcol" id="lcol"></aside>
   <section class="card rcol" id="rcol"></section>
 </main>
+<main class="hwrap" id="hview" style="display:none"></main>
 <div class="bar" id="bar"></div>
 <div class="mask" id="mask"></div>
 <div class="toast" id="toast"></div>
@@ -796,7 +829,7 @@ function buildFlyer(c, st, x){
 }
 
 /* ---------- 圖示（lucide） ---------- */
-const IC = {
+const IC = {clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
   sparkles:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
@@ -1156,6 +1189,136 @@ function drawQR(){
   el.innerHTML=''; new QRCode(el,{text:el.dataset.url,width:92,height:92,colorDark:'#0f172a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
 }
 
+
+/* ---------- 歷史紀錄查詢（我們這端；HIS 查詢介面待確認） ---------- */
+let view = QS.get('page')==='history'?'history':'care';
+const hist = {mode:'opd', q:'', from:'', to:'', clinic:'', status:'', doc:'', dm:'', sel:null, tab:'rec'};
+const HIST_LIVE = new Map();
+const withMode = (k,fn) => { const m=mode; mode=k; try{ return fn(); } finally{ mode=m; } };
+const addDays = (d,n) => { const t=toDate(d); t.setDate(t.getDate()+n); return `${t.getFullYear()-1911}${String(t.getMonth()+1).padStart(2,'0')}${String(t.getDate()).padStart(2,'0')}`; };
+const isoOf = d => `${+d.slice(0,3)+1911}-${d.slice(3,5)}-${d.slice(5,7)}`;
+const SEED_SNAP = {};
+function seedFull(c){   // 最近一次：營養部營養評估單（營養師實際紀錄）轉成門診紀錄
+  if(SEED_SNAP[c.code]) return SEED_SNAP[c.code];
+  return SEED_SNAP[c.code]=withMode('opd',()=>{
+    const st=initOpd(c), sh=c.sheet, ac=sh.actual, d=OPD_DEMO[c.code];
+    st.recall=Object.fromEntries(MEALS.map(m=>[m,clone(sh.intake[m]||{})]));
+    st.dietText=`${sh.S}（${sh.pattern}）`;
+    st.kcal=ac.kcal; st.protein=ac.protein; st.meals=ac.meals||st.meals;
+    st.plan=Object.fromEntries(MEALS.map(m=>[m,clone(ac.plan[m]||{})]));
+    const ss=ncpS(c,st,derive(c,st));
+    st.ncp=d.ncp.map(([cat,P,E,si])=>({cat,P,E,S:ss[si]}));
+    LEARN.forEach(([k],i)=>st.learn[k]=d.learn[i]); st.interv=[...d.interv];
+    st.f1='done'; st.f1At=roc(sh.date);
+    st.flyer=buildFlyer(c,st,derive(c,st)); st.f2='saved'; st.savedAt=roc(sh.date);
+    return st; });
+}
+function upsertHist(c,st,status,kind=mode){
+  HIST_LIVE.set(`live-${kind}-${c.code}`,{id:`live-${kind}-${c.code}`,src:'live',kind,code:c.code,visitDate:c.sheet.date,savedAt:nowRoc(),
+    clinic:kind==='opd'?st.clinic:'住院營養照護',dmMode:kind==='opd'?st.dmMode:'',status,snap:clone(st),
+    rec:st.f1==='done',flyer:!!st.flyer&&st.f2!=='none',sig:!!st.sig}); }
+function histRows(){
+  const rows=[];
+  DATA.forEach(c=>{ const vs=c.visits, n=vs.length;
+    rows.push({id:`seed-full-${c.code}`,src:'seed',kind:'opd',code:c.code,visitDate:c.sheet.date,savedAt:'',clinic:'糖尿病門診',dmMode:'',status:'已存檔',rec:true,flyer:true,sig:false,srcLabel:'示範歷史資料（營養部評估單）'});
+    vs.forEach((v,i)=>{ if(i===n-1) return;
+      rows.push({id:`seed-v-${c.code}-${i}`,src:'seed',kind:'opd',code:c.code,visitDate:v.date,savedAt:'',clinic:'',dmMode:'',status:'已存檔',rec:false,flyer:false,sig:false,srcLabel:'示範歷史資料（衛教中心個管紀錄）',vi:i}); }); });
+  const B=DATA.find(c=>c.code==='B')||DATA[0];
+  rows.push({id:'seed-stash',src:'seed',kind:'opd',code:B.code,visitDate:addDays(B.sheet.date,14),savedAt:'',clinic:'糖尿病門診',dmMode:'預做',status:'暫存',rec:false,flyer:false,sig:false,srcLabel:'示範歷史資料（暫存範例）'});
+  HIST_LIVE.forEach(r=>rows.push({...r,srcLabel:'本次示範操作'}));
+  return rows;
+}
+function histFiltered(){
+  const q=hist.q.trim().toUpperCase().replace('DEMO-','');
+  return histRows().filter(r=>r.kind===hist.mode
+    &&(!q||r.code.includes(q))
+    &&(!hist.from||isoOf(r.visitDate)>=hist.from)&&(!hist.to||isoOf(r.visitDate)<=hist.to)
+    &&(!hist.clinic||r.clinic===hist.clinic)&&(!hist.status||r.status===hist.status)
+    &&(!hist.dm||(hist.dm==='無'?!r.dmMode:r.dmMode===hist.dm))
+    &&(!hist.doc||(hist.doc==='rec'?r.rec:r.flyer)))
+    .sort((a,b)=>b.visitDate.localeCompare(a.visitDate)||(b.savedAt||'').localeCompare(a.savedAt||''));
+}
+const dbd = (t,on) => `<span class="dbd ${on?'ok':'no'}">${on?'✓ '+t:'—'}</span>`;
+const hsel = (f,opts,lab) => `<label>${lab}<select data-kind="hf" data-f="${f}">${opts.map(([v,t])=>`<option value="${esc(v)}" ${hist[f]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`;
+function historyHTML(){
+  if(hist.sel) return histDetail();
+  const rows=histFiltered(), opd=hist.mode==='opd';
+  return `
+  <div class="hbar"><h2>${ic('clock')}歷史紀錄查詢</h2>
+    <div class="hmode">${[['opd','門診'],['ipd','住院']].map(([m,t])=>`<button class="${hist.mode===m?'on':''}" data-act="hmode" data-m="${m}">${t}</button>`).join('')}</div>
+    <span class="sp ihn">一次就診一筆；點選一筆可看營養紀錄與衛教單張。資料為示範用，HIS 查詢介面待與院方確認</span></div>
+  <div class="card hfilters">
+    <label>個案／病歷編碼<input type="text" data-kind="hf" data-f="q" value="${esc(hist.q)}" placeholder="例：A 或 DEMO-B"></label>
+    <label>看診日期（起）<input type="date" data-kind="hf" data-f="from" value="${hist.from}"></label>
+    <label>看診日期（迄）<input type="date" data-kind="hf" data-f="to" value="${hist.to}"></label>
+    ${opd?hsel('clinic',[['','全部'],...CLINICS.map(k=>[k,k])],'門診種類'):''}
+    ${opd?hsel('dm',[['','全部'],['補做','補做'],['預做','預做'],['無','無']],'補做／預做'):''}
+    ${hsel('status',[['','全部'],['已存檔','已存檔'],['暫存','暫存']],'狀態')}
+    ${hsel('doc',[['','全部'],['rec',opd?'有營養紀錄':'有訪視紀錄'],['flyer','有衛教單張']],'文件類型')}
+    <label>&nbsp;<button class="btn" data-act="hreset">${ic('refresh','sm')}清除篩選</button></label>
+  </div>
+  <div class="card">
+    <div class="htblw"><table class="htbl"><thead><tr><th>看診日期</th><th>個案</th>${opd?'<th>門診種類</th><th>補做／預做</th>':'<th>類別</th>'}<th>${opd?'營養紀錄':'訪視紀錄'}</th><th>衛教單張</th>${opd?'<th>病人簽名</th>':''}<th>狀態</th><th>來源／存檔時間</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr data-act="hopen" data-id="${r.id}"><td class="mono">${roc(r.visitDate)}</td><td><b>個案 ${r.code}</b></td>
+      ${opd?`<td>${r.clinic||'—'}</td><td>${r.dmMode?`<span class="tg amb">${r.dmMode}</span>`:'—'}</td>`:`<td>${r.clinic}</td>`}
+      <td>${dbd('已完成',r.rec)}</td><td>${dbd('已產生',r.flyer)}</td>${opd?`<td>${dbd('已簽名',r.sig)}</td>`:''}
+      <td><span class="st ${r.status==='暫存'?'st-wait':'st-signed'}" style="margin:0">${r.status}</span></td>
+      <td class="hsrc">${r.srcLabel}${r.savedAt?`<br><span class="mono">${r.savedAt}</span>`:''}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${rows.length?`<div class="ihn" style="padding:10px 14px">共 ${rows.length} 筆</div>`:`<div class="hempty">${!opd&&!HIST_LIVE.size?'示範資料沒有住院個案的歷史紀錄。到「營養照護紀錄」的住院模式完成並存檔一筆，就會出現在這裡。':'沒有符合條件的紀錄'}</div>`}
+  </div>`;
+}
+function recView(c, st, x, kind){
+  const opd=kind==='opd', sh=c.sheet, ib=x.intake, pl=x.plan, L=st.life;
+  const showLow=x.ckdLow||[st.plan,st.recall].some(g=>Object.values(g).some(m=>m.lowN));
+  const labs=LAB_ALL.map(k=>[k,lab(c,k)]).filter(([,r])=>r).map(([k,r])=>`<span class="lv"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${rocM(r.date)}</i></span>`).join('');
+  const totrow=(o,n)=>`<div class="totrow"><span class="tl">${n}</span><span>熱量<b>${o.kcal}</b>大卡</span><span>蛋白質<b>${o.P}</b>克</span>${o.sup.kcal?`<span>含營養品<b>${o.sup.kcal}</b>大卡</span>`:''}</div>`;
+  const ncp=st.ncp.filter(n=>n.P).map((n,i)=>`<div class="hline" style="margin-bottom:6px"><div><small>主診斷 ${i+1}</small><b>${esc(n.P)}</b></div><div><small>病因 E</small>${esc(n.E||'—')}</div><div><small>病徵 S</small>${esc(n.S||'—')}</div></div>`).join('')||'<span class="ihn">未填寫</span>';
+  return `<div class="locked">
+    <div class="inblk"><div class="ih"><b>病人診斷與用藥</b></div><div class="dxrow"><div><small>主診斷</small><b>${x.dg.main}</b></div><div><small>共病</small>${x.dg.dx.join('、')||'—'}</div><div><small>用藥</small>${x.dg.drugs.join('、')}${st.selfPay?`、自費：${esc(st.selfPay)}`:''}</div></div></div>
+    <div class="inblk"><div class="ih"><b>生化檢驗</b><span class="src">當次最近一筆</span></div><div class="lvrow">${labs}</div></div>
+    ${opd&&L?`<div class="inblk"><div class="ih"><b>生活習慣</b></div><div class="hline"><div><small>抽菸</small>${L.抽菸||'—'}</div><div><small>喝酒</small>${L.喝酒||'—'}</div><div><small>檳榔</small>${L.檳榔||'—'}</div><div><small>運動</small>${L.運動.freq?`${L.運動.freq} 次/週・${L.運動.dur||''}${L.運動.types?.length?'・'+L.運動.types.join('、'):''}${L.運動.other?'・'+esc(L.運動.other):''}`:'無運動習慣'}</div></div></div>`:''}
+    ${opd?'':`<div class="inblk"><div class="ih"><b>訪視備註（AI 草稿＋營養師補充）</b></div><div style="white-space:pre-wrap;font-size:12px">${esc(st.note1||'—')}${st.supplement?'\n'+esc(st.supplement):''}</div></div>`}
+    <div class="inblk"><div class="ih"><b>飲食攝取評估</b></div>
+      ${opd?`<div style="font-size:12px;margin-bottom:10px"><small style="color:var(--s400)">24 小時飲食紀錄</small><br>${esc(st.dietText||'—')}</div>`:''}
+      ${gridTable('recall',st.recall,showLow,true)}${suppBox('recall',st,true)}${totrow(ib,'實際攝取量')}</div>
+    <div class="inblk"><div class="ih"><b>建議攝取量</b></div>
+      <div class="hline" style="margin-bottom:10px"><div><small>體重基準</small>${x.basisLabel} ${x.refW} kg</div><div><small>建議熱量</small>${st.kcal} kcal</div><div><small>蛋白質</small>${st.protein} g</div><div><small>餐次</small>${st.meals} 餐</div><div><small>奶製品</small>${st.useMilk!==false?'含':'不含'}</div></div>
+      ${gridTable('plan',st.plan,showLow,true)}${suppBox('plan',st,true)}${totrow(pl,'建議攝取量')}</div>
+    <div class="inblk"><div class="ih"><b>營養診斷（NCP）</b></div>${ncp}</div>
+    ${opd?`<div class="inblk"><div class="ih"><b>學習狀況與介入措施</b></div><div class="hline"><div><small>學習狀況</small>${LEARN.map(([k])=>`${k}：${st.learn[k]||'—'}`).join('　')}</div></div><div class="tags" style="margin-top:8px">${st.interv.map(i=>`<span class="tg">${esc(i)}</span>`).join('')||'<span class="ihn">—</span>'}</div></div>`:''}
+  </div>`;
+}
+function histDetail(){
+  const r=histRows().find(q=>q.id===hist.sel);
+  if(!r){ hist.sel=null; return historyHTML(); }
+  const c=DATA.find(q=>q.code===r.code), opd=r.kind==='opd';
+  const stc=r.status==='暫存'?'st-wait':'st-signed';
+  const head=`<div class="hbar"><button class="btn" data-act="hback">${ic('arrow','sm')}返回清單</button></div>
+    <div class="card"><div class="hhead"><span class="ti">個案 ${r.code} · ${roc(r.visitDate)}</span>
+      <span class="tg blu">${opd?(r.clinic||'衛教中心個管'):'住院'}</span>${r.dmMode?`<span class="tg amb">${r.dmMode}</span>`:''}
+      <span class="st ${stc}" style="margin:0">${r.status}</span><span class="hsrc">${r.srcLabel}${r.savedAt?'　'+r.savedAt:''}</span>`;
+  // 衛教中心個管紀錄（示範資料不完整）
+  if(r.vi!==undefined){ const v=c.visits[r.vi];
+    return head+`</div><div class="hbody"><div class="hnote">示範資料不完整：這筆是衛教中心個管紀錄，沒有營養門診的飲食紀錄、營養診斷與衛教單張，只能顯示下列內容。</div>
+      <div class="inblk"><div class="ih"><b>衛教項目</b></div><div class="tags">${v.edu_items.map(e=>`<span class="tg">${esc(e)}</span>`).join('')||'—'}</div></div>
+      <div class="inblk"><div class="ih"><b>當次數值</b></div><div class="hline">${[['血壓',v.sbp?`${v.sbp}/${v.dbp}`:''],['體重',v.wt?`${v.wt} kg`:''],['HbA1c',v.HbA1C],['AC',v.AC],['Cr',v.Cr],['eGFR',v.eGFR]].filter(a=>a[1]).map(([k,t])=>`<div><small>${k}</small>${t}</div>`).join('')||'—'}</div></div>
+      ${v.note?`<div class="inblk"><div class="ih"><b>備註</b></div><div style="font-size:12px">${esc(v.note)}</div></div>`:''}</div></div>`; }
+  // 示範暫存範例
+  if(r.id==='seed-stash') return head+`</div><div class="hbody"><div class="hnote">示範暫存範例：預做的紀錄，只保存到建立資料階段，尚未填寫營養紀錄與衛教單張。</div>
+    <div class="hline"><div><small>門診種類</small>${r.clinic}</div><div><small>補做／預做</small>${r.dmMode}</div><div><small>已完成項目</small>無</div></div></div></div>`;
+  const snap=r.src==='live'?r.snap:seedFull(c);
+  return withMode(r.kind,()=>{
+    const x=derive(c,snap), hasF=!!snap.flyer&&snap.f2!=='none';
+    const stashBtn=r.status==='暫存'?`<button class="btn te" data-act="hcontinue" data-id="${r.id}">${ic('arrow','sm')}繼續編輯</button>`:'';
+    const carryBtn=`<button class="btn pri" data-act="hcarry" data-id="${r.id}">${ic('plus','sm')}以此為基礎新增本次紀錄</button>`;
+    const tabs=`<div class="tabs">${[['rec',opd?'營養紀錄':'訪視紀錄','clip'],['flyer','衛教單張','file']].map(([k,t,i])=>`<button class="tab ${hist.tab===k?'on':''}" data-act="htab" data-t="${k}">${ic(i)}<span>${t}</span>${k==='flyer'?(hasF?'<span class="ok">已產生</span>':'<span class="cnt">未產生</span>'):''}</button>`).join('')}</div>`;
+    const body=hist.tab==='flyer'
+      ?(hasF?`<div class="edhint">${ic('sign','sm')}${snap.sig?'已簽名存檔，內容鎖定。':'內容鎖定。'}</div><div class="paper" id="print-area">${flyerHTML(c,snap,x,false)}</div>`:`<div class="hempty">此筆尚未產生衛教單張</div>`)
+      :`${r.status==='暫存'?`<div class="hnote">暫存中：尚未完成，內容為暫存當下的狀態。</div>`:''}${recView(c,snap,x,r.kind)}`;
+    return head+`<div class="ac">${hist.tab==='flyer'&&hasF?`<button class="btn" data-act="print">${ic('printer','sm')}列印</button>`:''}${stashBtn}${carryBtn}</div></div>${tabs}<div class="hbody">${body}</div></div>`; });
+}
+
 /* ---------- 門診：營養門診照護紀錄流程 ---------- */
 const NCP_CAT={NI:'攝取 (NI)',NC:'臨床 (NC)',NB:'行為與環境 (NB)'};
 const NCP_P={
@@ -1403,6 +1566,10 @@ function renderBar(c, st, x){
 }
 
 function render(){
+  const hv=$('#hview'), wr=document.querySelector('main.wrap'), h=view==='history';
+  $('#nv-care').classList.toggle('on',!h); $('#nv-hist').classList.toggle('on',h);
+  wr.style.display=h?'none':''; hv.style.display=h?'block':'none'; $('#bar').style.display=h?'none':'';
+  if(h){ const y=window.scrollY; hv.innerHTML=historyHTML(); drawQR(); window.scrollTo(0,y); return; }
   const c=DATA[cur], st=S(c), x=derive(c,st);
   const y=window.scrollY;
   $('#lcol').innerHTML=renderLeft(c,st,x);
@@ -1496,6 +1663,7 @@ document.addEventListener('click', e=>{
   const b=e.target.closest('[data-act]'); if(!b) { if(e.target===$('#mask')) closeModal(); return; }
   const c=DATA[cur], st=S(c), act=b.dataset.act, opd=mode==='opd';
   if(act==='skip'){ skipAnim=true; return; }
+  if(act==='view'){ e.preventDefault(); view=b.dataset.v; hist.sel=null; render(); window.scrollTo(0,0); return; }
   if(busy) return;
   if(act==='pick'){ cur=+b.dataset.i; render(); window.scrollTo(0,0); }
   else if(act==='mode'){ if(mode!==b.dataset.m){ mode=b.dataset.m; tab=TAB0[mode];
@@ -1521,14 +1689,27 @@ document.addEventListener('click', e=>{
       <div class="labscroll"><table class="labtbl"><thead><tr><th>檢驗日期</th><th>數值</th></tr></thead><tbody>${asc.map(r=>`<tr><td>${roc(r.date)}</td><td><b>${r.value}</b></td></tr>`).join('')}</tbody></table></div>
       <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="close">關閉</button></div></div>`); }
   else if(act==='confirm1'){ st.f1='done'; st.f1At=nowRoc(); tab=opd?'orec':'visit'; render(); toast(opd?'門診營養紀錄已完成':'訪視紀錄已確認並更新 HIS'); }
-  else if(act==='unconfirm1'){ if(opd&&st.f2==='saved') return; st.f1=opd?'todo':'his'; if(st.f2==='saved'||st.f2==='review'){ st.f2='draft'; st.savedAt=null; st.sig=null; st.sigDraft=null; } render(); }
+  else if(act==='unconfirm1'){ if(opd&&st.f2==='saved') return; if(!opd) HIST_LIVE.delete(`live-ipd-${c.code}`); st.f1=opd?'todo':'his'; if(st.f2==='saved'||st.f2==='review'){ st.f2='draft'; st.savedAt=null; st.sig=null; st.sigDraft=null; } render(); }
   else if(act==='gen2'){ runFlyerGen(c,st); }
   else if(act==='hide'){ st.flyer.on[b.dataset.f]=false; render(); }
   else if(act==='show'){ st.flyer.on[b.dataset.f]=true; render(); }
-  else if(act==='stash'){ st.stashAt=nowRoc(); render(); toast('已暫存，可從左側名單查詢目前狀態（未寫回 HIS）'); }
+  else if(act==='stash'){ st.stashAt=nowRoc(); upsertHist(c,st,'暫存','opd'); render(); toast('已暫存，可從左側名單查詢目前狀態（未寫回 HIS）'); }
   else if(act==='carry'){ const lv=lastVisit(c); st.life=clone(lv.life);
     const EDU2INT={'飲食衛教':'飲食原則指導','認識糖尿病':'糖尿病','低血糖護理衛教':'低血糖處理'}; const m=[...new Set(lv.edu_items.map(e=>EDU2INT[e]).filter(Boolean))]; st.interv=[...new Set([...st.interv,...m])]; st.carried=true;
     render(); toast(`已帶入 ${roc(lv.date)} 衛教中心紀錄：生活習慣、介入措施 ${m.length} 項`); }
+  else if(act==='hmode'){ hist.mode=b.dataset.m; hist.clinic=''; hist.dm=''; render(); }
+  else if(act==='hreset'){ Object.assign(hist,{q:'',from:'',to:'',clinic:'',status:'',doc:'',dm:''}); render(); }
+  else if(act==='hopen'){ hist.sel=b.dataset.id; hist.tab='rec'; render(); window.scrollTo(0,0); }
+  else if(act==='hback'){ hist.sel=null; render(); }
+  else if(act==='htab'){ hist.tab=b.dataset.t; render(); }
+  else if(act==='hcontinue'){ const r=HIST_LIVE.get(b.dataset.id); if(!r) return; cur=DATA.findIndex(q=>q.code===r.code); mode=r.kind;
+    const s2=S(DATA[cur]); tab=s2.f2==='review'?'sign':s2.f2!=='none'?'flyer':'orec'; view='care'; render(); window.scrollTo(0,0); }
+  else if(act==='hcarry'){ const r=histRows().find(q=>q.id===b.dataset.id); if(!r) return; const cc=DATA.find(q=>q.code===r.code);
+    const src=r.src==='live'?r.snap:seedFull(cc); mode=r.kind; cur=DATA.indexOf(cc); const t=S(cc);
+    if(t.f2==='saved'){ toast('本次紀錄已存檔，無法覆蓋；請先選其他個案'); return; }
+    Object.assign(t,{ncp:clone(src.ncp),kcal:src.kcal,protein:src.protein,meals:src.meals,plan:clone(src.plan),wBasis:src.wBasis,useMilk:src.useMilk,supps:{recall:t.supps.recall,plan:clone(src.supps.plan)}});
+    if(r.kind==='opd'){ t.life=clone(src.life); t.interv=[...src.interv]; t.carried=true; }
+    view='care'; tab=r.kind==='opd'?'orec':'input'; render(); window.scrollTo(0,0); toast('已帶入該次紀錄的建議攝取量、營養診斷與介入措施，可再修改'); }
   else if(act==='pd-add'){ st.extra.pdRows.push({type:PD_TYPES[0],vol:''}); render(); }
   else if(act==='pd-del'){ st.extra.pdRows.splice(+b.dataset.i,1); render(); }
   else if(act==='ncp-add'){ st.ncp.push({cat:'',P:'',E:'',S:''}); render(); }
@@ -1541,13 +1722,14 @@ document.addEventListener('click', e=>{
       <p style="margin-top:0">衛教單張與 QR Code${opd?'、病人簽名':''}將回寫 HIS「營養教育及諮詢處置」，存檔為本次病歷。</p>
       <div class="sum" style="margin-bottom:16px"><div class="b">建議熱量<b>${st.kcal} kcal</b></div><div class="b">蛋白質<b>${st.protein} g</b></div><div class="b">教育目標<b>${st.flyer.goals.length} 項</b></div>${opd?'<div class="b ok">病人簽名<b>✓ 已簽</b></div>':''}</div>
       <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-act="close">返回修改</button><button class="btn pri" data-act="confirm-save">${ic('check','sm')}確認存檔</button></div></div>`); }
-  else if(act==='confirm-save'){ st.f2='saved'; st.savedAt=nowRoc(); st.stashAt=null; if(opd) st.sig=st.sigDraft; closeModal(); tab=opd?'sign':'flyer'; render(); toast('已回寫 HIS 存檔為病歷'); }
-  else if(act==='unsave'){ if(opd) return; st.f2=opd?'review':'draft'; st.savedAt=null; if(opd){ st.sig=null; st.sigDraft=null; } render(); }
+  else if(act==='confirm-save'){ st.f2='saved'; st.savedAt=nowRoc(); st.stashAt=null; if(opd) st.sig=st.sigDraft; upsertHist(c,st,'已存檔',mode); closeModal(); tab=opd?'sign':'flyer'; render(); toast('已回寫 HIS 存檔為病歷'); }
+  else if(act==='unsave'){ if(opd) return; HIST_LIVE.delete(`live-ipd-${c.code}`); st.f2=opd?'review':'draft'; st.savedAt=null; if(opd){ st.sig=null; st.sigDraft=null; } render(); }
   else if(act==='print'){ if(tab!=='flyer'){ tab='flyer'; render(); } setTimeout(()=>window.print(),50); }
   else if(act==='close'){ closeModal(); }
 });
 document.addEventListener('change', e=>{
   const el=e.target, k=el.dataset.kind; if(!k||busy) return;
+  if(k==='hf'){ hist[el.dataset.f]=el.value; render(); return; }
   const c=DATA[cur], st=S(c);
   if(k==='set'){ const f=el.dataset.f; let v=el.value;
     if('num' in el.dataset || /^extra\.pg\.(intake|act)$/.test(f)) v=v===''?null:+v;
