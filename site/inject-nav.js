@@ -17,15 +17,21 @@
     var nutri = tabButton('營養部');
     if (!nutri) return;
     var group = nutri.parentElement;
-    if (!group.querySelector('[data-nutrition-form]')) {
+    // 與營養照護紀錄頁的導覽列保持一致：營養照護紀錄、歷史紀錄查詢
+    var HIST_ICON = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+    var NEW = '<span style="margin-left:6px;font-size:9px;line-height:14px;padding:0 4px;border-radius:4px;background:#34d399;color:#022c22;font-family:\'JetBrains Mono\',monospace">NEW</span>';
+    function addTab(attr, href, icon, label) {
+      if (group.querySelector('[' + attr + ']')) return;
       var a = document.createElement('a');
-      a.href = 'nutrition.html';
-      a.setAttribute('data-nutrition-form', '');
+      a.href = href;
+      a.setAttribute(attr, '');
       a.className = TAB_CLASS;
       a.style.textDecoration = 'none';
-      a.innerHTML = ICON + '<span>營養照護紀錄</span><span style="margin-left:6px;font-size:9px;line-height:14px;padding:0 4px;border-radius:4px;background:#34d399;color:#022c22;font-family:\'JetBrains Mono\',monospace">NEW</span>';
+      a.innerHTML = icon + '<span>' + label + '</span>' + NEW;
       group.appendChild(a);
     }
+    addTab('data-nutrition-form', 'nutrition.html', ICON, '營養照護紀錄');
+    addTab('data-nutrition-history', 'nutrition.html?page=history', HIST_ICON, '歷史紀錄查詢');
     // 從營養照護紀錄頁返回時（./#nutritionist）直接切到營養部
     if (!hashHandled) {
       hashHandled = true;
