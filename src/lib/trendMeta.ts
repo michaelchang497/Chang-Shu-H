@@ -67,13 +67,38 @@ export const TREND_METRICS: TrendMetric[] = [
   },
 ];
 
-// labHistory 的 date 格式為 "YYYY-MM"，計算實際涵蓋月數（含頭尾月份）
-export function describeDateRange(dates: string[]): string {
-  if (dates.length === 0) return '';
-  const first = dates[0];
-  const last = dates[dates.length - 1];
-  const [fy, fm] = first.split('-').map(Number);
-  const [ly, lm] = last.split('-').map(Number);
-  const months = (ly - fy) * 12 + (lm - fm) + 1;
-  return `${months} 個月追蹤歷史脈絡（${first} ~ ${last}）`;
+// labHistory 的 date 格式為 "YYYY-MM"
+export const DEFAULT_RANGE_MONTHS = 9; // 院方簡報：預設往前 9 個月
+
+function toIndex(ym: string): number {
+  const [y, m] = ym.split('-').map(Number);
+  return y * 12 + (m - 1);
+}
+function fromIndex(i: number): string {
+  const y = Math.floor(i / 12);
+  const m = (i % 12) + 1;
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+export interface MonthRange {
+  from: string; // YYYY-MM
+  to: string; // YYYY-MM
+}
+
+// 預設區間：以最新一筆檢驗月份為終點，往前 9 個月
+export function defaultRange(dates: string[]): MonthRange {
+  const to = dates[dates.length - 1];
+  return { from: fromIndex(toIndex(to) - DEFAULT_RANGE_MONTHS), to };
+}
+
+export function filterByRange<T extends { date: string }>(rows: T[], range: MonthRange): T[] {
+  return rows.filter((r) => r.date >= range.from && r.date <= range.to);
+}
+
+export function rangeMonths(range: MonthRange): number {
+  return toIndex(range.to) - toIndex(range.from);
+}
+
+export function describeRange(range: MonthRange, count: number): string {
+  return `${range.from} ~ ${range.to}（共 ${count} 筆檢驗）`;
 }

@@ -368,3 +368,14 @@ body {
 .completion-grid { display: flex; gap: 20px; align-items: flex-start; }
 .qr-image { width: 120px; height: 120px; border-radius: 6px; border: 1px solid #d1fae5; background: white; }
 .completion-meta { font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+
+.range-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 0 0 14px; font-size: 13px; color: #374151; }
+.range-controls label, .hist-filters label { display: flex; align-items: center; gap: 6px; }
+.range-controls input, .hist-filters input { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font-size: 13px; font-family: inherit; }
+.link-btn { background: none; border: none; color: #14532d; cursor: pointer; font-size: 13px; text-decoration: underline; padding: 0; }
+.hist-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; font-size: 13px; }
+.hist-filters .primary-btn { padding: 7px 16px; font-size: 13px; }
+.hist-table .row-selected { background: #f0fdf4; }
+.hist-detail { margin-top: 18px; }
+.hist-remarks { white-space: pre-wrap; font-family: inherit; font-size: 13px; margin: 0; }
+.hist-sig { width: 220px; height: 90px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; }

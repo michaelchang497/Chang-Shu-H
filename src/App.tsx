@@ -4,7 +4,8 @@ import { mockPatients } from './data/patientData';
 import { EDUCATION_TOPICS, EducationTopicId } from './data/educationTopics';
 import { evaluateLab } from './lib/labReference';
 import { recommendTopics } from './lib/recommendTopics';
-import { TREND_METRICS, describeDateRange } from './lib/trendMeta';
+import { TREND_METRICS, MonthRange, defaultRange, describeRange, filterByRange, rangeMonths } from './lib/trendMeta';
+import { EducationRecord, loadRecords, queryRecords, saveRecord } from './lib/educationHistory';
 import { ASSESSMENT_FIELDS, AssessmentFieldId } from './data/assessmentFields';
 import TrendChartCard from './components/TrendChartCard';
 import SignaturePad from './components/SignaturePad';
@@ -16,7 +17,7 @@ function statusLabel(status: 'normal' | 'high' | 'low') {
   return { text: '正常', cls: 'status-normal' };
 }
 
-type Tab = 'trend' | 'education' | 'signoff';
+type Tab = 'trend' | 'education' | 'signoff' | 'history';
 
 function buildDefaultRemarks(
   checked: Set<EducationTopicId>,
@@ -46,6 +47,12 @@ export default function App() {
   const [sessionId, setSessionId] = useState('');
   const [assessments, setAssessments] = useState<Partial<Record<AssessmentFieldId, string>>>({});
   const [nextFocus, setNextFocus] = useState('');
+  const [range, setRange] = useState<MonthRange | null>(null);
+  const [allRecords, setAllRecords] = useState<EducationRecord[]>(() => loadRecords());
+  const [hq, setHq] = useState({ patientId: '', from: '', to: '' });
+  const [hResults, setHResults] = useState<EducationRecord[] | null>(null);
+  const [hSelected, setHSelected] = useState<EducationRecord | null>(null);
+  const [saveWarn, setSaveWarn] = useState(false);
 
   function runSearch(id: string) {
     const found = mockPatients.find((p) => p.id === id.trim());
@@ -57,6 +64,7 @@ export default function App() {
     setError('');
     setPatient(found);
     setTab('trend');
+    setRange(defaultRange(found.labHistory.map((r) => r.date)));
     const current = found.labHistory[found.labHistory.length - 1];
     const recs = recommendTopics(found, current);
     setCheckedTopics(new Set(recs.map((r) => r.id)));
@@ -98,10 +106,17 @@ export default function App() {
     recommendations.forEach((r) => m.set(r.id, r.reason));
     return m;
   }, [recommendations]);
-  const dateRangeLabel = useMemo(
-    () => (patient ? describeDateRange(patient.labHistory.map((r) => r.date)) : ''),
-    [patient]
+  const shownHistory = useMemo(
+    () => (patient && range ? filterByRange(patient.labHistory, range) : []),
+    [patient, range]
   );
+  const rangeInvalid = Boolean(range && range.from && range.to && range.from > range.to);
+  const dateRangeLabel = range && !rangeInvalid ? describeRange(range, shownHistory.length) : '';
+
+  function runHistorySearch(next = hq) {
+    setHSelected(null);
+    setHResults(queryRecords(allRecords, next));
+  }
   const labelById = useMemo(() => {
     const m = new Map<EducationTopicId, string>();
     EDUCATION_TOPICS.forEach((t) => m.set(t.id, t.label));
@@ -133,6 +148,24 @@ export default function App() {
   function handleComplete() {
     if (!canComplete || !patient) return;
     const newId = `sess_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const rec: EducationRecord = {
+      id: newId,
+      patientId: patient.id,
+      patientName: patient.name,
+      date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+      time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      educator: '陳美倫 衛教師',
+      topics: checkedTopicList.map((t) => t.id),
+      assessments,
+      nextFocus,
+      remarks,
+      educatorSig: educatorSig ?? undefined,
+      patientSig: patientSig ?? undefined,
+    };
+    setSaveWarn(!saveRecord(rec));
+    setAllRecords((prev) => [rec, ...prev]);
     setSessionId(newId);
     setCompleted(true);
   }
@@ -241,9 +274,21 @@ export default function App() {
             <button className={tab === 'signoff' ? 'tab active' : 'tab'} onClick={() => setTab('signoff')}>
               <span className="tab-icon">✍️</span> 電子流程簽名與發放
             </button>
+            <button
+              className={tab === 'history' ? 'tab active' : 'tab'}
+              onClick={() => {
+                setTab('history');
+                const next = { ...hq, patientId: hq.patientId || patient?.id || '' };
+                setHq(next);
+                setHResults(queryRecords(allRecords, next));
+                setHSelected(null);
+              }}
+            >
+              <span className="tab-icon">🗂️</span> 衛教紀錄查詢
+            </button>
           </div>
 
-          {!patient && <p className="placeholder">請先於左側查詢病患以載入檢驗指標。</p>}
+          {!patient && tab !== 'history' && <p className="placeholder">請先於左側查詢病患以載入檢驗指標。</p>}
 
           {patient && tab === 'trend' && (
             <div className="tab-body">
@@ -261,11 +306,43 @@ export default function App() {
                   <div className="section-header-right-name">{patient.name}</div>
                 </div>
               </div>
-              <div className="chart-grid">
-                {TREND_METRICS.map((metric) => (
-                  <TrendChartCard key={metric.key} metric={metric} labHistory={patient.labHistory} />
-                ))}
-              </div>
+              {range && (
+                <div className="range-controls">
+                  <label>
+                    檢驗區間 起
+                    <input
+                      type="month"
+                      value={range.from}
+                      onChange={(e) => setRange({ ...range, from: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    迄
+                    <input
+                      type="month"
+                      value={range.to}
+                      onChange={(e) => setRange({ ...range, to: e.target.value })}
+                    />
+                  </label>
+                  <button
+                    className="link-btn"
+                    onClick={() => setRange(defaultRange(patient.labHistory.map((r) => r.date)))}
+                  >
+                    重設為預設（往前 9 個月）
+                  </button>
+                  {rangeInvalid && <span className="error">起始月份不可晚於結束月份</span>}
+                  {!rangeInvalid && rangeMonths(range) > 9 && (
+                    <span className="hint">已超過預設的 9 個月</span>
+                  )}
+                </div>
+              )}
+              {!rangeInvalid && (
+                <div className="chart-grid">
+                  {TREND_METRICS.map((metric) => (
+                    <TrendChartCard key={metric.key} metric={metric} labHistory={shownHistory} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -322,6 +399,123 @@ export default function App() {
                   );
                 })}
               </ul>
+            </div>
+          )}
+
+          {tab === 'history' && (
+            <div className="tab-body">
+              <h2>衛教紀錄查詢</h2>
+              <div className="hist-filters">
+                <label>
+                  病歷號碼
+                  <input
+                    value={hq.patientId}
+                    onChange={(e) => setHq({ ...hq, patientId: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && runHistorySearch()}
+                    placeholder="不填＝全部病歷"
+                  />
+                </label>
+                <label>
+                  衛教日期 起
+                  <input type="date" value={hq.from} onChange={(e) => setHq({ ...hq, from: e.target.value })} />
+                </label>
+                <label>
+                  迄
+                  <input type="date" value={hq.to} onChange={(e) => setHq({ ...hq, to: e.target.value })} />
+                </label>
+                <button className="primary-btn" onClick={() => runHistorySearch()}>查詢</button>
+                <button
+                  className="link-btn"
+                  onClick={() => {
+                    const cleared = { patientId: '', from: '', to: '' };
+                    setHq(cleared);
+                    runHistorySearch(cleared);
+                  }}
+                >
+                  清除條件
+                </button>
+              </div>
+
+              {hResults && hResults.length === 0 && <p className="placeholder">查無符合條件的衛教紀錄。</p>}
+              {hResults && hResults.length > 0 && (
+                <>
+                  <p className="hint">共 {hResults.length} 筆（同一病歷號可有多筆，依日期由新到舊）</p>
+                  <table className="lab-table hist-table">
+                    <thead>
+                      <tr>
+                        <th>衛教日期</th>
+                        <th>病歷號碼</th>
+                        <th>姓名</th>
+                        <th>衛教師</th>
+                        <th>衛教主題</th>
+                        <th>簽名</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hResults.map((r) => (
+                        <tr key={r.id} className={hSelected?.id === r.id ? 'row-selected' : ''}>
+                          <td>{r.date} {r.time}</td>
+                          <td>{r.patientId}</td>
+                          <td>{r.patientName}</td>
+                          <td>{r.educator}</td>
+                          <td>{r.topics.length} 項</td>
+                          <td>{r.id.startsWith('sess_seed') || (r.educatorSig && r.patientSig) ? '✓ 雙方已簽' : '—'}</td>
+                          <td>
+                            <button className="link-btn" onClick={() => setHSelected(r)}>查看</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {hSelected && (
+                <div className="writeback-preview hist-detail">
+                  <div className="completion-title">
+                    {hSelected.patientName}（{hSelected.patientId}）　{hSelected.date} {hSelected.time}
+                  </div>
+                  <div className="writeback-label">衛教項目（{hSelected.topics.length} 項）</div>
+                  <div className="topic-chip-row">
+                    {hSelected.topics.map((id) => (
+                      <span key={id} className="topic-chip">{labelById.get(id) ?? id}</span>
+                    ))}
+                  </div>
+                  <div className="writeback-label">個案認知與遵從度評估</div>
+                  <div className="topic-chip-row">
+                    {ASSESSMENT_FIELDS.filter((f) => hSelected.assessments[f.id]).map((f) => (
+                      <span key={f.id} className="topic-chip assessment-chip">
+                        {f.label}：{hSelected.assessments[f.id]}
+                      </span>
+                    ))}
+                    {ASSESSMENT_FIELDS.every((f) => !hSelected.assessments[f.id]) && (
+                      <span className="placeholder">未評估</span>
+                    )}
+                  </div>
+                  {hSelected.nextFocus && (
+                    <>
+                      <div className="writeback-label">下次需加強的項目</div>
+                      <div className="next-focus-preview">{hSelected.nextFocus}</div>
+                    </>
+                  )}
+                  {hSelected.remarks && (
+                    <>
+                      <div className="writeback-label">備註</div>
+                      <pre className="hist-remarks">{hSelected.remarks}</pre>
+                    </>
+                  )}
+                  <div className="writeback-label">簽名檔</div>
+                  {hSelected.educatorSig && hSelected.patientSig ? (
+                    <div className="signature-row">
+                      <div><img className="hist-sig" src={hSelected.educatorSig} alt="衛教師簽名" /><div className="hint">衛教師</div></div>
+                      <div><img className="hist-sig" src={hSelected.patientSig} alt="患者簽名" /><div className="hint">患者／家屬</div></div>
+                    </div>
+                  ) : (
+                    <p className="hint">衛教師 ✓ ／ 病患或家屬 ✓（示意資料，無簽名圖檔）</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -427,6 +621,7 @@ export default function App() {
               {completed && (
                 <div className="completion-panel">
                   <div className="completion-title">✓ 已回寫個管系統，本次衛教紀錄已存檔</div>
+                  {saveWarn && <p className="error">瀏覽器儲存空間不足，本次紀錄不會出現在「衛教紀錄查詢」。</p>}
                   <div className="completion-grid">
                     <img className="qr-image" src={qrUrl} alt="衛教紀錄 QR 碼" />
                     <div className="completion-meta">

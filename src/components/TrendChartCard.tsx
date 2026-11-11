@@ -22,6 +22,16 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
     value: rec[metric.key] as number,
   }));
   const current = data[data.length - 1]?.value;
+  if (data.length === 0) {
+    return (
+      <div className="chart-card">
+        <div className="chart-title">
+          {metric.labelZh} <span className="en">{metric.labelEn}</span>
+        </div>
+        <p className="placeholder">此區間內無檢驗資料</p>
+      </div>
+    );
+  }
   const isAbnormal =
     current !== undefined &&
     (metric.direction === 'above' ? current > metric.referenceValue : current < metric.referenceValue);
