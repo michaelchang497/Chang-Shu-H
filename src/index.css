@@ -388,3 +388,69 @@ a.seg-item:hover { color: #e2e8f0; }
 .seg-item.on { background: linear-gradient(to right, #0d9488, #059669); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
 .seg-ic { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .seg-new { font-size: 9px; font-family: ui-monospace, monospace; background: #34d399; color: #022c22; border-radius: 4px; padding: 0 4px; line-height: 14px; }
+
+/* ===== 與舊版衛教中心／營養照護紀錄頁一致的外觀（Tailwind slate / emerald 色票） ===== */
+body { font-family: Inter, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif; background: #f8fafc; color: #0f172a; -webkit-font-smoothing: antialiased; }
+.page { background: #f8fafc; padding-bottom: 64px; }
+.topbar { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1); border-bottom: 1px solid #022c22; }
+.brand-logo-badge { height: 44px; border-radius: 6px; padding: 4px; }
+.subbrand { font-size: 10px; color: #6ee7b7; opacity: 1; margin: 0; }
+.user-badge { font-size: 12px; font-weight: 700; background: transparent; border: 1px solid rgba(4,120,87,.7); border-radius: 4px; padding: 4px 28px; color: #fff; }
+.topbar-status { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; text-transform: uppercase; background: rgba(2,6,23,.4); border: 1px solid rgba(4,120,87,.4); color: #6ee7b7; border-radius: 6px; padding: 3px 10px; }
+.status-dot { width: 6px; height: 6px; background: #34d399; box-shadow: none; }
+
+.layout { max-width: 1280px; margin: 0 auto; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 24px; padding: 24px; }
+.left-col { display: flex; flex-direction: column; gap: 20px; }
+.panel { border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1); }
+.panel h2 { font-size: 14px; font-weight: 700; color: #334155; }
+.search-panel h2 { margin-bottom: 14px; }
+.search-row input { padding: 7px 10px; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+.search-row input:focus { outline: 2px solid #a7f3d0; border-color: #059669; }
+.search-row button { background: #059669; border-radius: 8px; font-size: 12px; font-weight: 700; padding: 7px 16px; }
+.search-row button:hover { background: #047857; }
+.hint { color: #64748b; }
+.imported-banner { color: #047857; background: #ecfdf5; border-color: #a7f3d0; border-radius: 8px; }
+
+.patient-card { margin-top: 0; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1); }
+.patient-card-bar { background: #0f172a; color: #6ee7b7; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: .02em; padding: 10px 16px; }
+.patient-card-bar-right { color: #94a3b8; font-family: Inter, "Noto Sans TC", sans-serif; }
+.patient-card-body { background: #fff; padding: 16px; }
+.patient-avatar { background: #d1fae5; color: #047857; }
+.patient-name { font-size: 16px; }
+.patient-meta-pill { background: #f1f5f9; color: #475569; border-radius: 4px; }
+.patient-id { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.patient-vitals { justify-content: space-between; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 10px 14px; gap: 12px; }
+.vital-label { color: #64748b; }
+.vital-value { font-size: 13px; }
+.patient-diagnosis { background: #f8fafc; border: 1px solid #f1f5f9; color: #334155; }
+.patient-diagnosis-label { color: #64748b; }
+
+.content-panel { padding: 0; overflow: hidden; }
+.content-panel .tabs { background: #f8fafc; border-bottom: 1px solid #e2e8f0; margin: 0; padding: 0 24px; gap: 16px; overflow-x: auto; }
+.tab { padding: 14px 4px; font-size: 12px; font-weight: 700; color: #94a3b8; gap: 8px; flex-shrink: 0; border-bottom: 2px solid transparent; }
+.tab:hover { color: #475569; }
+.tab.active { color: #065f46; border-bottom-color: #059669; }
+.tab-ic { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tab-body { padding: 24px; }
+.content-panel > .placeholder { padding: 24px; margin: 0; }
+.section-title { color: #1e293b; }
+.range-badge { background: #ecfdf5; color: #047857; border: 1px solid #d1fae5; border-radius: 4px; font-weight: 700; }
+.section-header-right-name { color: #334155; }
+
+.chart-grid { gap: 20px; }
+.chart-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1); }
+.chart-title { font-size: 12px; font-weight: 700; color: #334155; }
+.chart-current { font-size: 11px; font-weight: 700; }
+.chart-current.abnormal { color: #c2410c; }
+
+.topic-checked { background: #ecfdf5; }
+.topic-chip { background: #ecfdf5; color: #047857; border-color: #d1fae5; }
+.status-normal { background: #ecfdf5; color: #047857; }
+.assessment-field, .signature-pad, .writeback-preview { border-color: #e2e8f0; border-radius: 12px; }
+.primary-btn { background: #059669; border-radius: 8px; font-size: 13px; font-weight: 700; }
+.primary-btn:hover:not(:disabled) { background: #047857; }
+.link-btn { color: #047857; }
+.range-controls input, .hist-filters input { border-color: #e2e8f0; border-radius: 8px; background: #f8fafc; }
+.hist-table .row-selected { background: #ecfdf5; }
+
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .seg { display: none; } }

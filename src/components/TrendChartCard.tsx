@@ -42,7 +42,7 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
         <div className="chart-title">
           {metric.labelZh} <span className="en">{metric.labelEn}</span>
         </div>
-        <div className={`chart-current ${isAbnormal ? 'abnormal' : ''}`}>
+        <div className={`chart-current ${isAbnormal ? 'abnormal' : ''}`} style={isAbnormal ? undefined : { color: metric.color }}>
           目前：{current} {metric.unit}
         </div>
       </div>
@@ -50,8 +50,8 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
         <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
           <defs>
             <linearGradient id={`fill-${metric.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#14532d" stopOpacity={0.32} />
-              <stop offset="100%" stopColor="#14532d" stopOpacity={0} />
+              <stop offset="0%" stopColor={metric.color} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={metric.color} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke="#eef1f0" vertical={false} />
@@ -70,10 +70,10 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
           <Area
             type="monotone"
             dataKey="value"
-            stroke="#14532d"
+            stroke={metric.color}
             strokeWidth={2.5}
             fill={`url(#fill-${metric.key})`}
-            dot={{ r: 3, fill: '#14532d', strokeWidth: 0 }}
+            dot={{ r: 3.5, fill: '#fff', stroke: metric.color, strokeWidth: 2 }}
             activeDot={{ r: 5 }}
           />
         </AreaChart>

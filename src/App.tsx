@@ -205,12 +205,13 @@ export default function App() {
           <div className="user-badge">陳美倫 衛教師</div>
           <div className="topbar-status">
             <span className="status-dot" />
-            HIS 系統已連線
+            HIS SIMULATED
           </div>
         </div>
       </header>
 
       <main className="layout">
+        <div className="left-col">
         <section className="panel search-panel">
           <h2>病歷號碼檢索系統 (HIS)</h2>
           <div className="search-row">
@@ -235,7 +236,8 @@ export default function App() {
           </p>
           {error && <p className="error">{error}</p>}
 
-          {patient && (
+        </section>
+        {patient && (
             <div className="patient-card">
               <div className="patient-card-bar">
                 <span className="status-dot" />
@@ -275,19 +277,19 @@ export default function App() {
                 </div>
               </div>
             </div>
-          )}
-        </section>
+        )}
+        </div>
 
         <section className="panel content-panel">
           <div className="tabs">
             <button className={tab === 'trend' ? 'tab active' : 'tab'} onClick={() => setTab('trend')}>
-              <span className="tab-icon">📈</span> HIS 檢驗與趨勢分析圖
+              <svg viewBox="0 0 24 24" className="tab-ic"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg> HIS 檢驗與趨勢分析圖
             </button>
             <button className={tab === 'education' ? 'tab active' : 'tab'} onClick={() => setTab('education')}>
-              <span className="tab-icon">🩺</span> AI 判讀與衛教
+              <svg viewBox="0 0 24 24" className="tab-ic"><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /><path d="M10 13h4M10 17h4" /></svg> AI 判讀與衛教
             </button>
             <button className={tab === 'signoff' ? 'tab active' : 'tab'} onClick={() => setTab('signoff')}>
-              <span className="tab-icon">✍️</span> 電子流程簽名與發放
+              <svg viewBox="0 0 24 24" className="tab-ic"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg> 電子流程簽名與發放
             </button>
             <button
               className={tab === 'history' ? 'tab active' : 'tab'}
@@ -299,7 +301,7 @@ export default function App() {
                 setHSelected(null);
               }}
             >
-              <span className="tab-icon">🗂️</span> 衛教紀錄查詢
+              <svg viewBox="0 0 24 24" className="tab-ic"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg> 衛教紀錄查詢
             </button>
           </div>
 

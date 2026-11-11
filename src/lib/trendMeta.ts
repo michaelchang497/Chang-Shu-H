@@ -8,6 +8,7 @@ export interface TrendMetric {
   referenceValue: number;
   referenceLabel: string;
   direction: 'above' | 'below'; // 'above' = 超過門檻視為異常, 'below' = 低於門檻視為異常
+  color: string; // 曲線顏色（對齊舊版：各指標不同色）
 }
 
 export const TREND_METRICS: TrendMetric[] = [
@@ -19,6 +20,7 @@ export const TREND_METRICS: TrendMetric[] = [
     referenceValue: 100,
     referenceLabel: 'ADA 控糖門檻 100',
     direction: 'above',
+    color: '#4f46e5',
   },
   {
     key: 'hba1c',
@@ -28,6 +30,7 @@ export const TREND_METRICS: TrendMetric[] = [
     referenceValue: 7,
     referenceLabel: '血糖目標 ≤ 7%',
     direction: 'above',
+    color: '#059669',
   },
   {
     key: 'egfr',
@@ -37,6 +40,7 @@ export const TREND_METRICS: TrendMetric[] = [
     referenceValue: 60,
     referenceLabel: 'CKD 臨界值 60',
     direction: 'below',
+    color: '#0f766e',
   },
   {
     key: 'uacr',
@@ -46,6 +50,7 @@ export const TREND_METRICS: TrendMetric[] = [
     referenceValue: 30,
     referenceLabel: '微量白蛋白尿臨界值 30',
     direction: 'above',
+    color: '#ea580c',
   },
   {
     key: 'chol',
@@ -55,6 +60,7 @@ export const TREND_METRICS: TrendMetric[] = [
     referenceValue: 200,
     referenceLabel: '參考上限 200',
     direction: 'above',
+    color: '#be123c',
   },
   {
     key: 'tg',
@@ -64,6 +70,7 @@ export const TREND_METRICS: TrendMetric[] = [
     referenceValue: 150,
     referenceLabel: '參考上限 150',
     direction: 'above',
+    color: '#b45309',
   },
 ];
 
