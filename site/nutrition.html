@@ -44,6 +44,11 @@ svg.ic.sm{width:14px;height:14px}
 .nav-user input:focus{outline:none;border-color:#2dd4bf}
 .his{padding:2px 10px;background:rgba(2,44,34,.4);border:1px solid rgba(4,120,87,.3);border-radius:6px;font-size:10px;color:var(--em300);font-family:var(--font-mono);text-transform:uppercase}
 
+.subtabs{max-width:1280px;margin:12px auto 0;padding:0 24px}
+.subtabs .in{display:flex;gap:4px;border-bottom:1px solid var(--s200)}
+.subtabs button{all:unset;cursor:pointer;padding:9px 16px;font-size:13px;font-weight:600;color:var(--s500);border-bottom:2px solid transparent;margin-bottom:-1px}
+.subtabs button:hover{color:var(--s800)}
+.subtabs button.on{color:var(--te800);border-bottom-color:var(--te700);font-weight:700}
 .demo-note{max-width:1280px;margin:16px auto 0;padding:0 24px}
 .demo-note div{background:var(--am50);border:1px solid var(--am200);color:var(--am800);border-radius:8px;padding:6px 12px;font-size:11px;display:flex;gap:6px;align-items:center}
 
@@ -556,8 +561,7 @@ textarea.typing{border-color:var(--te600)!important;box-shadow:0 0 0 3px rgba(13
   <div class="seg">
     <a href="./#educator"><svg class="ic sm" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>衛教中心</a>
     <a href="./#nutritionist"><svg class="ic sm" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>營養部</a>
-    <a class="on" id="nv-care" href="#" data-act="view" data-v="care"><svg class="ic sm" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>營養照護紀錄<span class="new">NEW</span></a>
-    <a id="nv-hist" href="#" data-act="view" data-v="history"><svg class="ic sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>歷史紀錄查詢<span class="new">NEW</span></a>
+    <a class="on" id="nv-care" href="#" data-act="view" data-v="care" title="營養照護紀錄"><svg class="ic sm" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>營養照護紀錄<span class="new">NEW</span></a>
   </div>
   <div class="nav-r">
     <div class="nav-user"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="rd" value="示範 臨床營養師" aria-label="營養師姓名"></div>
@@ -566,6 +570,10 @@ textarea.typing{border-color:var(--te600)!important;box-shadow:0 0 0 3px rgba(13
 </nav>
 <div class="demo-note"><div><svg class="ic sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>示範環境：使用院方提供的 3 位真實個案資料，已去識別化（以個案 A/B/C 代稱）。AI 生成文字為模擬內容（尚未串接模型）；住院流程的「護理紀錄」以衛教中心個管紀錄替代；熱量、蛋白質係數為暫定值。左側可切換住院／門診流程。</div></div>
 
+<div class="subtabs"><div class="in" id="subtabs">
+  <button class="on" id="vt-care" data-act="view" data-v="care">照護紀錄</button>
+  <button id="vt-hist" data-act="view" data-v="history">歷史紀錄查詢</button>
+</div></div>
 <main class="wrap">
   <aside class="lcol" id="lcol"></aside>
   <section class="card rcol" id="rcol"></section>
@@ -1602,7 +1610,7 @@ function renderBar(c, st, x){
 
 function render(){
   const hv=$('#hview'), wr=document.querySelector('main.wrap'), h=view==='history';
-  $('#nv-care').classList.toggle('on',!h); $('#nv-hist').classList.toggle('on',h);
+  $('#vt-care').classList.toggle('on',!h); $('#vt-hist').classList.toggle('on',h);
   wr.style.display=h?'none':''; hv.style.display=h?'block':'none'; $('#bar').style.display=h?'none':'';
   if(h){ const y=window.scrollY; hv.innerHTML=historyHTML(); drawQR(); window.scrollTo(0,y); return; }
   const c=DATA[cur], st=S(c), x=derive(c,st);
