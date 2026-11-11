@@ -306,6 +306,8 @@ button.lv:hover{border-color:var(--te700)}
 .supprow .u,.supprow .ro2{font-size:11.5px;color:var(--s500)}
 .supprow .ro2{font-family:var(--font-mono)}
 
+.lv.na{cursor:default;opacity:.55;background:transparent;border-style:dashed}
+.lv.sample,span.labbig,span.lv{cursor:default}
 .lv small{display:block;font-size:9.5px;color:var(--s400);font-weight:600}
 .lv b{font-family:var(--font-mono);font-size:13px;color:var(--s800)}
 .lv i{font-style:normal;font-size:9.5px;color:var(--s400);margin-left:4px;font-family:var(--font-mono)}
@@ -662,6 +664,11 @@ function baseOf(c, st){
     bmiClass:bmi<18.5?'體重過輕':bmi<24?'體重正常':bmi<27?'過重':bmi<35?'肥胖':'重度肥胖'};
 }
 const lab = (c,k) => latest(c,k,c.sheet.date);
+/* 住院「入院病摘」「飲食醫囑」示意內容（院方簡報 p.13–14 要求顯示；實際待 HIS API，代碼為示意） */
+const ADM_SAMPLE={
+  A:{pi:'第 2 型糖尿病併慢性腎臟病 3a 期，近日食慾下降、疲倦，入院評估腎功能與血糖控制。',plan:'監測腎功能與電解質；調整降血糖藥；營養師會診，飲食衛教。',code:'DM-1600（示意）',order:'糖尿病飲食 1600 大卡，低鈉'},
+  B:{pi:'第 2 型糖尿病、血脂異常，血糖控制不佳（HbA1c 9.3%），入院調整治療。',plan:'胰島素劑量調整；血糖日夜監測；糖尿病衛教與飲食代換指導。',code:'DM-1800（示意）',order:'糖尿病飲食 1800 大卡'},
+  C:{pi:'第 2 型糖尿病併慢性腎臟病 4 期、肥胖，因水腫、喘入院。',plan:'利尿劑調整；限水限鈉；腎臟病飲食衛教。',code:'REN-LP（示意）',order:'腎臟病低蛋白飲食，限鉀限磷'}};
 function diagnosisOf(c, x){
   const dx=[...new Set(c.visits.flatMap(v=>v.diseases))].filter(s=>s!=='無').map(s=>s.replace(/^其他/,''));
   const v=c.visits[c.visits.length-1];
@@ -767,7 +774,7 @@ function initOpd(c){
 const QS=new URLSearchParams(location.search);
 let mode = QS.get('mode')==='opd'?'opd':'ipd';
 const TAB0 = {ipd:'input', opd:'orec'};
-const CLINICS=['糖尿病門診','慢性腎臟病門診','自費門診','高檢','帕金森氏症','血液透析','腹膜透析','癌症營養門診','其他'];
+const CLINICS=['糖尿病門診','慢性腎臟病門診','自費門診','高檢','帕金森氏症','血液透析','腹膜透析','癌症營養門診','代謝症候群','其他'];
 const HY=['未分期','第 1 期','第 1.5 期','第 2 期','第 2.5 期','第 3 期','第 4 期','第 5 期'];  // Hoehn-Yahr，示意
 const SELFPAY=['碳酸鈣','檸檬酸鈣','活性維生素 D','磷結合劑（自費）','維生素 B 群','魚油'];
 const PD_TYPES=['葡萄糖 1.5%','葡萄糖 2.5%','葡萄糖 4.25%','愛多尼爾 Extraneal 7.5%（澱粉類多醣）'];
@@ -941,17 +948,36 @@ function ncpBlock(c, st, x, lk, note){
   return `<div class="inblk"><div class="ih"><b>營養診斷（NCP）</b><span class="src">${note}</span>
       ${st.ncp.length<2&&!lk?`<button class="btn sm" data-act="ncp-add" style="margin-left:auto">${ic('plus','sm')}新增主診斷 2</button>`:''}</div>${ncp}</div>`;
 }
-const LABN={HbA1C:'糖化血色素 HbA1c',AC:'空腹血糖 AC',PC:'飯後血糖 PC',Cr:'肌酸酐 Cr',eGFR:'eGFR',BUN:'BUN',GOT:'GOT',GPT:'GPT',CHOL:'總膽固醇',TG:'三酸甘油酯 TG','LDL-C':'LDL-C','HDL-C':'HDL-C',UACR:'UACR'};
+const LABN={HbA1C:'糖化血色素 HbA1c',AC:'空腹血糖 AC',PC:'飯後血糖 PC',Cr:'肌酸酐 Cr',eGFR:'eGFR',BUN:'BUN',GOT:'GOT (AST)',GPT:'GPT (ALT)',CHOL:'總膽固醇',TG:'三酸甘油酯 TG','LDL-C':'LDL-C','HDL-C':'HDL-C',UACR:'UACR',
+  Na:'Na 鈉',K:'K 鉀',Ca:'Ca 鈣',P:'P 磷',Mg:'Mg 鎂',UA:'尿酸 UA',INS:'胰島素 Insulin',HOMA:'HOMA-IR',rGT:'γ-GT',ALB:'白蛋白 Alb',TP:'總蛋白 TP',VITD:'25-OH 維生素 D',FER:'鐵蛋白 Ferritin',
+  HB:'血紅素 Hb',HCT:'血球容積 Hct',PTH:'PTH',TSAT:'TSAT',WBC:'WBC',ANC:'ANC',PLT:'血小板 PLT',CRP:'CRP',IRON:'鐵 Iron',B12:'維生素 B12',FOL:'葉酸 Folate',BILT:'總膽紅素 Bilirubin total',BILD:'直接膽紅素 Bilirubin direct'};
 const LAB_ALL=['HbA1C','AC','PC','Cr','eGFR','BUN','GOT','GPT','CHOL','TG','LDL-C','HDL-C','UACR'];
 const RENAL=['eGFR','Cr','BUN','UACR'];
-const LAB_PRI={'糖尿病門診':['HbA1C','AC','PC','LDL-C','TG'],'慢性腎臟病門診':RENAL,'血液透析':['BUN','Cr',...RENAL],'腹膜透析':['BUN','Cr',...RENAL],
-  '癌症營養門診':['GOT','GPT','Cr','AC'],'帕金森氏症':['AC','Cr','eGFR']};  // 示意排序，待院方確認；資料中無鉀、磷
+/* 各門診種類的生化項目：依 2026/09/24 院方簡報第 22–25 頁；糖尿病門診把 HbA1c 排在最前（顯示順序為示意）。
+   本示範資料沒有的項目會以灰色「無資料」列出，實際資料待 HIS 檢驗 API。 */
+const LAB_PRI={
+  '糖尿病門診':['HbA1C','AC','PC','BUN','Cr','eGFR','UACR','CHOL','TG','LDL-C','HDL-C','GOT','GPT','Na','K','UA'],
+  '慢性腎臟病門診':RENAL,
+  '自費門診':['HbA1C','AC','INS','CHOL','TG','LDL-C','HDL-C','GOT','GPT','rGT','BUN','Cr','eGFR','ALB','TP','Na','K','Ca','UA','VITD','FER'],
+  '高檢':['HbA1C','AC','CHOL','TG','LDL-C','HDL-C','GOT','GPT','rGT','BUN','Cr','eGFR','UACR','ALB','TP','HB','HCT','Na','K','Ca','UA','VITD'],
+  '帕金森氏症':['BUN','Cr','eGFR','GOT','GPT','HB','HCT','ALB','TP','Na','K','Ca','P','VITD','B12','FOL','FER'],
+  '血液透析':['BUN','Cr','eGFR','K','Na','Ca','P','PTH','ALB','TP','HB','HCT','FER','TSAT','AC','HbA1C','CHOL','TG','LDL-C','HDL-C','GOT','GPT'],
+  '腹膜透析':['BUN','Cr','eGFR','K','Na','Ca','P','PTH','ALB','TP','HB','HCT','FER','TSAT','AC','HbA1C','CHOL','TG','LDL-C','HDL-C','GOT','GPT'],
+  '癌症營養門診':['HB','HCT','WBC','ANC','PLT','ALB','TP','BUN','Cr','eGFR','GOT','GPT','rGT','BILT','Na','K','Ca','P','Mg','AC','HbA1C','CRP','FER','IRON','B12','FOL','VITD'],
+  '代謝症候群':['HbA1C','AC','TG','HDL-C','LDL-C','CHOL','GOT','GPT','rGT','BUN','Cr','eGFR','UACR','UA','INS','HOMA']};
 function labTiles(c, pri, get, label){
   const order=[...new Set([...pri,...LAB_ALL])].map(k=>[k,get(k)]).filter(([,r])=>r);
+  const missing=pri.filter(k=>!get(k));
   const big=order.slice(0,3), rest=order.slice(3);
+  const tile=([k,r],cls)=>r.sample
+    ?`<span class="${cls}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>示意</i></span>`
+    :(cls==='labbig'
+      ?`<button class="labbig" data-act="labhist" data-k="${k}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${roc(r.date)}</i></button>`
+      :`<button class="lv" data-act="labhist" data-k="${k}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${rocM(r.date)}</i></button>`);
   return `<div class="ihn" style="margin-bottom:8px">${label}　點選數值可看歷史報告與趨勢圖</div>
-    <div class="labbigs">${big.map(([k,r])=>`<button class="labbig" data-act="labhist" data-k="${k}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${roc(r.date)}</i></button>`).join('')}</div>
-    ${rest.length?`<details class="labrest"><summary>其他檢驗（${rest.length} 項）</summary><div class="lvrow">${rest.map(([k,r])=>`<button class="lv" data-act="labhist" data-k="${k}"><small>${LABN[k]||k}</small><b>${r.value}</b><i>${rocM(r.date)}</i></button>`).join('')}</div></details>`:''}`;
+    <div class="labbigs">${big.map(o=>tile(o,'labbig')).join('')}</div>
+    ${rest.length?`<details class="labrest"><summary>其他檢驗（${rest.length} 項）</summary><div class="lvrow">${rest.map(o=>tile(o,'lv')).join('')}</div></details>`:''}
+    ${missing.length?`<details class="labrest"><summary>此門診的其他檢驗項目（${missing.length} 項，示範資料無）</summary><div class="lvrow">${missing.map(k=>`<span class="lv na"><small>${LABN[k]||k}</small><b>—</b></span>`).join('')}</div></details>`:''}`;
 }
 const srcChip = (label, kind) => `<span class="chip-src ${kind}">${label}</span>`;
 const MATCH = {ok:['符合','m-ok'], part:['部分符合','m-part'], alt:['以替代資料示範','m-alt'], none:['缺','m-none']};
@@ -1029,7 +1055,9 @@ function renderInput(c, st, x){
   const charts=defs.map(([t,k,u,o,col])=>{ const rs=k?series(c,k).filter(r=>r.date<=d):egfrRows; const l=rs[rs.length-1];
     const old=l&&daysBetween(l.date,d)>180;
     return `<div class="chart"><div class="ch"><span style="font-family:var(--font-sans);font-size:12px">${t}</span>${l?`<span style="color:${col}">最新: ${l.value}${u}${old?`<em>${rocM(l.date)} · 逾半年</em>`:''}</span>`:''}</div>${chart(rs,o)}</div>`;}).join('');
-  const recent=labTiles(c,['HbA1C','AC','eGFR','Cr'],k=>lab(c,k),'依主診斷（糖尿病併腎病變）優先排序，示意');
+  const sampleLab={BILT:{value:0.8,date:c.sheet.date,sample:true},BILD:{value:0.2,date:c.sheet.date,sample:true}};  // 院方簡報要求顯示，示範資料無此二項，以示意值呈現
+  const recent=labTiles(c,['HbA1C','AC','eGFR','Cr','BILT','BILD'],k=>sampleLab[k]||lab(c,k),'依主診斷（糖尿病併腎病變）優先排序，示意；膽紅素為示意值');
+  const adm=ADM_SAMPLE[c.code]||ADM_SAMPLE.A;
   const visits=c.visits.map((v,i)=>{const und=Object.entries(v.understanding).filter(([k,s])=>s!=='了解').map(([k])=>k);
     return `<div class="visit ${i===c.visits.length-1?'last':''}"><span class="d">${roc(v.date)}</span>
       <div><small>衛教項目</small><div class="tags">${v.edu_items.map(e=>`<span class="tg">${esc(e)}</span>`).join('')||'—'}</div></div>
@@ -1041,7 +1069,8 @@ function renderInput(c, st, x){
     ['護理紀錄','護理紀錄（P6 排便等由 TPR 帶入）',`衛教中心個管師衛教紀錄 ${c.visits.length} 次`,'alt','院方未提供住院護理紀錄'],
     ['檢驗數值','檢驗摘要（P5 最近一筆）',`HIS 檢驗 ${nLab} 筆（${roc(c.lab_json_range[0])}–${roc(c.lab_json_range[1])}）`,'ok',''],
     ['營養師飲食紀錄','P9 營養師訪視紀錄','營養部營養評估單的 24 小時飲食回顧','ok','衛教單張的輸入'],
-    ['飲食醫囑／管灌','P6、P11 系統帶入最近一筆','—','none','門診個案無此資料'],
+    ['入院病摘','入院病摘：現在病史（present illness）、plan（簡報 p.13）','示意內容','alt','待 HIS 入院病摘 API'],
+    ['飲食醫囑／管灌','P6、P11 系統帶入最近一筆；代碼＋文字（簡報 p.14）','示意內容','alt','待 HIS 飲食醫囑 API，代碼格式待確認'],
   ];
   return `
     <div class="sech"><div><h3>${ic('db')}<span>1. 住院營養照護紀錄</span><span class="pill">依「住院營養照護紀錄流程」P9、P12</span></h3>
@@ -1055,6 +1084,12 @@ function renderInput(c, st, x){
 
     <div class="inblk"><div class="ih">${srcChip('診斷','dx')}<b>病人診斷</b>${matchTag('part')}</div>
       <div class="dxrow"><div><small>主診斷</small><b>${x.dg.main}</b></div><div><small>共病</small>${x.dg.dx.join('、')||'—'}</div><div><small>用藥</small>${x.dg.drugs.join('、')}</div></div></div>
+
+    <div class="inblk"><div class="ih">${srcChip('診斷','dx')}<b>入院病摘</b>${matchTag('alt')}<span class="ihn">示意內容；實際由 HIS 入院病摘帶入</span></div>
+      <div class="dxrow"><div><small>現在病史 Present illness</small>${esc(adm.pi)}</div><div><small>Plan</small>${esc(adm.plan)}</div></div></div>
+
+    <div class="inblk"><div class="ih">${srcChip('診斷','dx')}<b>飲食醫囑</b>${matchTag('alt')}<span class="ihn">示意內容；代碼與文字由 HIS 飲食醫囑帶入</span></div>
+      <div class="dxrow"><div><small>醫囑代碼</small><b>${esc(adm.code)}</b></div><div><small>醫囑內容</small>${esc(adm.order)}</div></div></div>
 
     <div class="inblk"><div class="ih">${srcChip('護理紀錄','nr')}<b>護理紀錄</b>${matchTag('alt')}<span class="ihn">以衛教中心個管師紀錄替代；住院護理紀錄（TPR、I/O、排便）待院方提供</span></div>
       <div class="vgrid">${visits}</div></div>
