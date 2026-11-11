@@ -19,15 +19,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare site (deploy legacy self-contained bundle)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Build 衛教中心 (src/ React app) -> dist/
         run: |
-          mkdir -p dist
-          cp Chang-Shu-H-main/index.html dist/index.html
-      - name: Add 營養評估單 page and nav tab
+          npm ci
+          npm run build
+      - name: Keep legacy bundle (含營養部) as legacy.html
         run: |
-          cp site/nutrition.html site/inject-nav.js dist/
-          sed -i 's#</body>#<script src="inject-nav.js"></script></body>#' dist/index.html
-          grep -q 'inject-nav.js' dist/index.html
+          cp Chang-Shu-H-main/index.html dist/legacy.html
+          sed -i 's#</body>#<script src="inject-nav.js"></script></body>#' dist/legacy.html
+          grep -q 'inject-nav.js' dist/legacy.html
+      - name: Add 營養照護紀錄 page
+        run: cp site/nutrition.html site/inject-nav.js dist/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

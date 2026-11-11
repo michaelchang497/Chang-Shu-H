@@ -9,9 +9,10 @@ body {
 .page { min-height: 100vh; }
 
 .topbar {
-  background: linear-gradient(135deg, #14532d 0%, #1c6b3a 100%);
+  background: linear-gradient(to right, #065f46, #115e59, #0f172a);
   color: white;
   padding: 14px 24px;
+  gap: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -379,3 +380,11 @@ body {
 .hist-detail { margin-top: 18px; }
 .hist-remarks { white-space: pre-wrap; font-family: inherit; font-size: 13px; margin: 0; }
 .hist-sig { width: 220px; height: 90px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; }
+
+/* 導覽列：與營養照護紀錄頁一致 */
+.seg { display: flex; align-items: center; background: rgba(2,6,23,.4); border-radius: 12px; padding: 4px; border: 1px solid rgba(4,120,87,.3); box-shadow: inset 0 2px 4px rgba(0,0,0,.05); }
+.seg-item { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: #94a3b8; text-decoration: none; transition: .15s; }
+a.seg-item:hover { color: #e2e8f0; }
+.seg-item.on { background: linear-gradient(to right, #0d9488, #059669); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+.seg-ic { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.seg-new { font-size: 9px; font-family: ui-monospace, monospace; background: #34d399; color: #022c22; border-radius: 4px; padding: 0 4px; line-height: 14px; }
