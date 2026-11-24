@@ -1,6 +1,20 @@
 import { AssessmentFieldId } from '../data/assessmentFields';
 import { EducationTopicId } from '../data/educationTopics';
 
+// 完成當下的快照，讓「衛教紀錄單」之後能原樣重現（示意資料沒有）
+export interface RecordSnapshot {
+  age: number;
+  gender: 'M' | 'F';
+  height: number;
+  weight: number;
+  bmi: number;
+  diagnosis: string;
+  labDate: string;
+  labs: { labelZh: string; labelEn: string; value: number; unit: string; reference: string; status: 'normal' | 'high' | 'low' }[];
+  summaryPoints: string[];
+  topicReasons: Partial<Record<EducationTopicId, string>>;
+}
+
 export interface EducationRecord {
   id: string;
   patientId: string;
@@ -14,6 +28,7 @@ export interface EducationRecord {
   remarks: string;
   educatorSig?: string; // 簽名圖檔 data URL（示意資料沒有）
   patientSig?: string;
+  snapshot?: RecordSnapshot;
 }
 
 const STORAGE_KEY = 'csh-education-records-v1';

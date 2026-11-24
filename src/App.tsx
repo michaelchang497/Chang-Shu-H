@@ -9,6 +9,9 @@ import { EducationRecord, loadRecords, queryRecords, saveRecord } from './lib/ed
 import { ASSESSMENT_FIELDS, AssessmentFieldId } from './data/assessmentFields';
 import TrendChartCard from './components/TrendChartCard';
 import SignaturePad from './components/SignaturePad';
+import FloatingSearch from './components/FloatingSearch';
+import RecordSheet from './components/RecordSheet';
+import { buildAutoRemarks, mergeAuto } from './lib/remarks';
 import { Patient } from './types';
 
 function statusLabel(status: 'normal' | 'high' | 'low') {
@@ -41,19 +44,6 @@ const AI_STEP_LABELS = [
 
 const STATUS_WORD = { high: '偏高', low: '偏低', normal: '正常' } as const;
 
-function buildDefaultRemarks(
-  checked: Set<EducationTopicId>,
-  reasonById: Map<EducationTopicId, string>,
-  labelById: Map<EducationTopicId, string>
-): string {
-  const lines: string[] = [];
-  checked.forEach((id) => {
-    const reason = reasonById.get(id);
-    if (reason) lines.push(`• ${labelById.get(id)}：${reason}`);
-  });
-  return lines.join('\n');
-}
-
 export default function App() {
   const [patientId, setPatientId] = useState('10010882');
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -65,7 +55,8 @@ export default function App() {
   const [educatorSig, setEducatorSig] = useState<string | null>(null);
   const [patientSig, setPatientSig] = useState<string | null>(null);
   const [remarks, setRemarks] = useState('');
-  const [remarksTouched, setRemarksTouched] = useState(false);
+  const lastAutoRef = useRef('');
+  const [doneRecord, setDoneRecord] = useState<EducationRecord | null>(null);
   const [completed, setCompleted] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [assessments, setAssessments] = useState<Partial<Record<AssessmentFieldId, string>>>({});
@@ -85,13 +76,15 @@ export default function App() {
   const [hResults, setHResults] = useState<EducationRecord[] | null>(null);
   const [hSelected, setHSelected] = useState<EducationRecord | null>(null);
   const [saveWarn, setSaveWarn] = useState(false);
+  // 病患掃 QR 碼開啟的唯讀衛教紀錄（?view-summary=紀錄編號）
+  const viewSummaryId = useMemo(() => new URLSearchParams(window.location.search).get('view-summary'), []);
 
-  function runSearch(id: string) {
+  function runSearch(id: string): boolean {
     const found = mockPatients.find((p) => p.id === id.trim());
     if (!found) {
       setError('查無此病歷號碼。可測試的病歷號碼：10010881、10010882、10010883。');
       setPatient(null);
-      return;
+      return false;
     }
     setError('');
     setPatient(found);
@@ -108,11 +101,14 @@ export default function App() {
     // 換病患時，簽名與回寫狀態一併重置，避免誤帶上一位病患的簽核紀錄
     setEducatorSig(null);
     setPatientSig(null);
-    setRemarksTouched(false);
     setCompleted(false);
+    setDoneRecord(null);
+    lastAutoRef.current = '';
+    setRemarks('');
     setSessionId('');
     setAssessments({});
     setNextFocus('');
+    return true;
   }
 
   // 模擬個管系統「拋轉」到本系統的交接：HIS 端會帶著病歷號開啟本頁，
@@ -127,9 +123,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleSearch() {
+  function handleSearch(): boolean {
     setImportedFromHis(false);
-    runSearch(patientId);
+    return runSearch(patientId);
   }
 
   const current = patient ? patient.labHistory[patient.labHistory.length - 1] : null;
@@ -200,7 +196,6 @@ export default function App() {
       setAnalysis(res);
       setAnalysisKey(key);
       if (!completed) setCheckedTopics(new Set(res.topics.map((x) => x.id)));
-      setRemarksTouched(false);
     } catch (e) {
       if (runIdRef.current === runId) setAiError(e instanceof Error ? e.message : '判讀失敗，請重試');
     } finally {
@@ -233,10 +228,20 @@ export default function App() {
 
   // 備註欄自動帶入「勾選主題的判斷依據」——這些細節在固定 23 項 checkbox
   // 結構裡沒有對應欄位，依 slide 2 的要求回寫至備註。個管師仍可手動編輯。
+  // 只要衛教項目、評估、下次加強、異常值任何一項有變動，備註就自動補上對應內容（保留個管師手寫的文字）
   useEffect(() => {
-    if (remarksTouched) return;
-    setRemarks(buildDefaultRemarks(checkedTopics, reasonById, labelById));
-  }, [checkedTopics, reasonById, labelById, remarksTouched]);
+    if (completed) return;
+    const next = buildAutoRemarks({
+      checked: checkedTopics,
+      reasons: reasonById,
+      assessments,
+      nextFocus,
+      findings: analysis?.abnormalFindings ?? [],
+    });
+    const prev = lastAutoRef.current;
+    lastAutoRef.current = next;
+    setRemarks((cur) => mergeAuto(cur, prev, next));
+  }, [checkedTopics, reasonById, assessments, nextFocus, analysis, completed]);
 
   // 切換流程步驟時回到頁面頂端（平板上才看得到新步驟的開頭）
   useEffect(() => {
@@ -263,11 +268,53 @@ export default function App() {
       remarks,
       educatorSig: educatorSig ?? undefined,
       patientSig: patientSig ?? undefined,
+      snapshot: {
+        age: patient.age,
+        gender: patient.gender,
+        height: patient.height,
+        weight: patient.weight,
+        bmi: patient.bmi,
+        diagnosis: patient.diagnosis,
+        labDate: current?.date ?? '',
+        labs: labRows.map((r) => ({
+          labelZh: r.labelZh,
+          labelEn: r.labelEn,
+          value: r.value,
+          unit: r.unit,
+          reference: r.reference,
+          status: r.status,
+        })),
+        summaryPoints: analysis?.summaryPoints ?? [],
+        topicReasons: Object.fromEntries(reasonById),
+      },
     };
     setSaveWarn(!saveRecord(rec));
     setAllRecords((prev) => [rec, ...prev]);
     setSessionId(newId);
+    setDoneRecord(rec);
     setCompleted(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 完成後開始下一位：回到查詢畫面
+  function startNext() {
+    runIdRef.current += 1;
+    setPatient(null);
+    setPatientId('');
+    setAnalysis(null);
+    setAnalysisKey('');
+    setAiRunning(false);
+    setCheckedTopics(new Set());
+    setEducatorSig(null);
+    setPatientSig(null);
+    setCompleted(false);
+    setDoneRecord(null);
+    setSessionId('');
+    setAssessments({});
+    setNextFocus('');
+    setRemarks('');
+    lastAutoRef.current = '';
+    setTab('trend');
   }
 
   const viewerLink = sessionId
@@ -276,6 +323,31 @@ export default function App() {
   const qrUrl = viewerLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(viewerLink)}`
     : '';
+
+  if (viewSummaryId) {
+    const rec = allRecords.find((r) => r.id === viewSummaryId);
+    return (
+      <div className="page">
+        <header className="topbar">
+          <div className="brand-block">
+            <span className="brand-logo-badge">
+              <img src={logoFull} alt="彰化秀傳紀念醫院" />
+            </span>
+            <div className="subbrand">AI 智慧個人化衛教與臨床營養照護平台</div>
+          </div>
+        </header>
+        <main className="viewer-page">
+          {rec ? (
+            <RecordSheet record={rec} />
+          ) : (
+            <p className="placeholder">
+              找不到這份衛教紀錄。示意版本的紀錄只存在製作它的那台裝置，正式環境會由後端提供可跨裝置開啟的臨時網址。
+            </p>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -452,6 +524,7 @@ export default function App() {
       ) : (
       <main className="layout">
         <div className="left-col">
+        {!patient && (
         <section className="panel search-panel">
           <h2>病歷號碼檢索系統 (HIS)</h2>
           <div className="search-row">
@@ -463,20 +536,21 @@ export default function App() {
               }}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="輸入病歷號碼"
+              inputMode="numeric"
             />
-            <button onClick={handleSearch}>查詢病患</button>
+            <button onClick={() => handleSearch()}>查詢病患</button>
           </div>
-          {importedFromHis && patient && (
-            <p className="imported-banner">
-              ✓ 已由個管系統帶入病歷號 {patient.id}，檢驗資料已自動查詢完成
-            </p>
-          )}
           <p className="hint">
             系統提示：可供測試的病歷號碼為 10010881（林彰美）、10010882（陳彰秀）與 10010883（王彰和）。
           </p>
           {error && <p className="error">{error}</p>}
-
         </section>
+        )}
+        {importedFromHis && patient && (
+          <p className="imported-banner">
+            ✓ 已由個管系統帶入病歷號 {patient.id}，檢驗資料已自動查詢完成
+          </p>
+        )}
         {patient && (
             <div className="patient-card">
               <div className="patient-card-bar">
@@ -758,7 +832,19 @@ export default function App() {
             </div>
           )}
 
-          {patient && tab === 'signoff' && (
+          {patient && tab === 'signoff' && doneRecord && (
+            <div className="tab-body">
+              <div className="done-banner">✓ 已回寫個管系統，本次衛教紀錄已存檔</div>
+              {saveWarn && <p className="error">瀏覽器儲存空間不足，本次紀錄不會出現在「衛教紀錄查詢」。</p>}
+              <RecordSheet record={doneRecord} share={{ link: viewerLink, qrUrl }} />
+              <div className="step-actions">
+                <span className="step-hint">可請病患掃描 QR 碼，或複製臨時網址傳給病患</span>
+                <button className="big-btn primary" onClick={startNext}>完成，開始下一位病患</button>
+              </div>
+            </div>
+          )}
+
+          {patient && tab === 'signoff' && !doneRecord && (
             <div className="tab-body">
               <h2>個案認知與遵從度評估</h2>
               <p className="hint">由個管師依本次對談內容評估勾選，非系統依檢驗值自動判斷，未勾選則視為未評估。</p>
@@ -797,8 +883,8 @@ export default function App() {
 
               <h2 className="topics-heading">雙重電子簽名完成衛教流程</h2>
               <div className="signature-row">
-                <SignaturePad label="彰秀衛教師簽名板" onChange={setEducatorSig} />
-                <SignaturePad label="患者本人／家屬授權簽名板" onChange={setPatientSig} />
+                <SignaturePad label="彰秀衛教師簽名板" value={educatorSig} onChange={setEducatorSig} />
+                <SignaturePad label="患者本人／家屬授權簽名板" value={patientSig} onChange={setPatientSig} />
               </div>
 
               <h2 className="topics-heading">回寫個管系統預覽（個管師審視用）</h2>
@@ -834,48 +920,22 @@ export default function App() {
                 )}
 
                 <label className="writeback-label" htmlFor="remarks-box">
-                  備註欄（無法對應固定欄位之判讀細節，將一併回寫，可編輯）
+                  備註欄（有變動會自動補上內容；無法對應固定欄位之判讀細節將一併回寫，可編輯）
                 </label>
                 <textarea
                   id="remarks-box"
                   className="remarks-box"
                   rows={6}
                   value={remarks}
-                  onChange={(e) => {
-                    setRemarks(e.target.value);
-                    setRemarksTouched(true);
-                  }}
+                  onChange={(e) => setRemarks(e.target.value)}
                 />
               </div>
 
-              {!completed && (
-                <button className="primary-btn" disabled={!canComplete} onClick={handleComplete}>
-                  確認資料正確，完成衛教並回寫個管系統
-                </button>
-              )}
-              {!canComplete && !completed && (
-                <p className="hint">雙方簽名皆完成後才能發放本次衛教紀錄。</p>
-              )}
+              <button className="primary-btn" disabled={!canComplete} onClick={handleComplete}>
+                確認資料正確，完成衛教並回寫個管系統
+              </button>
+              {!canComplete && <p className="hint">雙方簽名皆完成後才能發放本次衛教紀錄。</p>}
 
-              {completed && (
-                <div className="completion-panel">
-                  <div className="completion-title">✓ 已回寫個管系統，本次衛教紀錄已存檔</div>
-                  {saveWarn && <p className="error">瀏覽器儲存空間不足，本次紀錄不會出現在「衛教紀錄查詢」。</p>}
-                  <div className="completion-grid">
-                    <img className="qr-image" src={qrUrl} alt="衛教紀錄 QR 碼" />
-                    <div className="completion-meta">
-                      <div>紀錄編號：{sessionId}</div>
-                      <div>回寫衛教項目：{checkedTopicList.length} 項</div>
-                      <div>
-                        認知與遵從度評估：
-                        {ASSESSMENT_FIELDS.filter((f) => assessments[f.id]).length} / {ASSESSMENT_FIELDS.length} 項
-                      </div>
-                      <div>簽名檔：衛教師 ✓ ／ 病患或家屬 ✓</div>
-                      <div className="hint">此 QR 碼將顯示於個管系統衛教作業畫面，供病患／家屬掃碼查閱。</div>
-                    </div>
-                  </div>
-                </div>
-              )}
               <div className="step-actions">
                 <button className="big-btn ghost" onClick={() => setTab('education')}>← 返回 AI 判讀</button>
               </div>
@@ -883,6 +943,19 @@ export default function App() {
           )}
         </section>
       </main>
+      )}
+      {view === 'care' && patient && (
+        <FloatingSearch
+          patientName={patient.name}
+          patientId={patient.id}
+          inputValue={patientId}
+          onInputChange={(v) => {
+            setPatientId(v);
+            setImportedFromHis(false);
+          }}
+          onSearch={handleSearch}
+          error={error}
+        />
       )}
     </div>
   );
