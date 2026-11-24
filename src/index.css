@@ -463,3 +463,13 @@ body { font-family: Inter, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
 .subtabs-in button.on { color: #065f46; border-bottom-color: #059669; }
 .hist-page { max-width: 1280px; margin: 0 auto; padding: 20px 24px 24px; }
 .hist-panel { padding: 0; }
+
+/* 檢驗數值變化幅度（區間首筆 → 末筆） */
+.chart-delta { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; margin: 4px 0 6px; padding: 6px 10px; border-radius: 8px; font-size: 12px; background: #f8fafc; color: #475569; }
+.chart-delta .delta-range { grid-column: 1 / -1; color: #64748b; font-size: 11px; }
+.chart-delta .delta-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.chart-delta .delta-tag { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #fff; }
+.chart-delta.worse { background: #fef2f2; color: #b91c1c; }
+.chart-delta.worse .delta-tag { color: #b91c1c; border: 1px solid #fecaca; }
+.chart-delta.better { background: #ecfdf5; color: #047857; }
+.chart-delta.better .delta-tag { color: #047857; border: 1px solid #a7f3d0; }

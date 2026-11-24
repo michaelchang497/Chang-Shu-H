@@ -16,6 +16,9 @@ interface Props {
   labHistory: LabRecord[];
 }
 
+// 四捨五入到最多 1 位小數（HbA1c 等小數指標不被吃掉）
+const fmt = (n: number) => String(Math.round(n * 10) / 10);
+
 export default function TrendChartCard({ metric, labHistory }: Props) {
   const data = labHistory.map((rec) => ({
     date: rec.date,
@@ -32,6 +35,18 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
       </div>
     );
   }
+  // 變化幅度：區間內第一筆 → 最後一筆（區間由使用者選的起迄決定）
+  const first = data[0];
+  const last = data[data.length - 1];
+  const hasDelta = data.length >= 2;
+  const diff = last.value - first.value;
+  const pct = first.value !== 0 ? (diff / first.value) * 100 : null;
+  const flat = Math.round(diff * 10) / 10 === 0;
+  // direction 'above'：超標才異常 → 越低越好；'below'：低於才異常 → 越高越好
+  const improved = metric.direction === 'above' ? diff < 0 : diff > 0;
+  const deltaClass = flat ? 'flat' : improved ? 'better' : 'worse';
+  const sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
+
   const isAbnormal =
     current !== undefined &&
     (metric.direction === 'above' ? current > metric.referenceValue : current < metric.referenceValue);
@@ -45,6 +60,22 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
         <div className={`chart-current ${isAbnormal ? 'abnormal' : ''}`} style={isAbnormal ? undefined : { color: metric.color }}>
           目前：{current} {metric.unit}
         </div>
+      </div>
+      <div className={`chart-delta ${hasDelta ? deltaClass : 'flat'}`}>
+        {hasDelta ? (
+          <>
+            <span className="delta-range">
+              {first.date} → {last.date}
+            </span>
+            <span className="delta-value">
+              {flat ? '— 持平' : `${diff > 0 ? '▲' : '▼'} ${sign}${fmt(Math.abs(diff))} ${metric.unit}`}
+              {!flat && pct !== null && `（${sign}${fmt(Math.abs(pct))}%）`}
+            </span>
+            {!flat && <span className="delta-tag">{improved ? '改善' : '惡化'}</span>}
+          </>
+        ) : (
+          <span className="delta-range">區間內僅 1 筆檢驗，無法計算變化幅度</span>
+        )}
       </div>
       <ResponsiveContainer width="100%" height={170}>
         <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
