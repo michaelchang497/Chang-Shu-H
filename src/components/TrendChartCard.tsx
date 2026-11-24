@@ -42,9 +42,6 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
   const diff = last.value - first.value;
   const pct = first.value !== 0 ? (diff / first.value) * 100 : null;
   const flat = Math.round(diff * 10) / 10 === 0;
-  // direction 'above'：超標才異常 → 越低越好；'below'：低於才異常 → 越高越好
-  const improved = metric.direction === 'above' ? diff < 0 : diff > 0;
-  const deltaClass = flat ? 'flat' : improved ? 'better' : 'worse';
   const sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
 
   const isAbnormal =
@@ -61,7 +58,7 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
           目前：{current} {metric.unit}
         </div>
       </div>
-      <div className={`chart-delta ${hasDelta ? deltaClass : 'flat'}`}>
+      <div className="chart-delta">
         {hasDelta ? (
           <>
             <span className="delta-range">
@@ -71,7 +68,7 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
               {flat ? '— 持平' : `${diff > 0 ? '▲' : '▼'} ${sign}${fmt(Math.abs(diff))} ${metric.unit}`}
               {!flat && pct !== null && `（${sign}${fmt(Math.abs(pct))}%）`}
             </span>
-            {!flat && <span className="delta-tag">{improved ? '改善' : '惡化'}</span>}
+            {!flat && <span className="delta-tag">{diff > 0 ? '上升' : '下降'}</span>}
           </>
         ) : (
           <span className="delta-range">區間內僅 1 筆檢驗，無法計算變化幅度</span>

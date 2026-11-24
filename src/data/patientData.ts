@@ -11,10 +11,16 @@ export const mockPatients: Patient[] = [
     weight: 68,
     bmi: 28.3,
     labHistory: [
-      { date: "2025-09", fastingGlucose: 165, hba1c: 8.2, creatinine: 0.95, egfr: 65, uacr: 45, chol: 210, tg: 165 },
-      { date: "2025-12", fastingGlucose: 158, hba1c: 7.9, creatinine: 0.98, egfr: 61, uacr: 52, chol: 205, tg: 158 },
-      { date: "2026-03", fastingGlucose: 145, hba1c: 7.6, creatinine: 1.05, egfr: 58, uacr: 68, chol: 198, tg: 150 },
-      { date: "2026-06", fastingGlucose: 172, hba1c: 8.3, creatinine: 1.15, egfr: 52, uacr: 110, chol: 215, tg: 180 }
+      { date: "2024-03", fastingGlucose: 150, hba1c: 8.0, creatinine: 0.85, egfr: 74, uacr: 22, chol: 220, tg: 175, ua: 5.0 },
+      { date: "2024-06", fastingGlucose: 155, hba1c: 8.1, creatinine: 0.86, egfr: 73, uacr: 25, chol: 218, tg: 172, ua: 5.1 },
+      { date: "2024-09", fastingGlucose: 148, hba1c: 7.8, creatinine: 0.88, egfr: 71, uacr: 28, chol: 214, tg: 170, ua: 5.3 },
+      { date: "2024-12", fastingGlucose: 152, hba1c: 7.9, creatinine: 0.90, egfr: 70, uacr: 32, chol: 212, tg: 168, ua: 5.4 },
+      { date: "2025-03", fastingGlucose: 160, hba1c: 8.1, creatinine: 0.92, egfr: 68, uacr: 38, chol: 211, tg: 166, ua: 5.6 },
+      { date: "2025-06", fastingGlucose: 163, hba1c: 8.2, creatinine: 0.93, egfr: 67, uacr: 41, chol: 209, tg: 164, ua: 5.8 },
+      { date: "2025-09", fastingGlucose: 165, hba1c: 8.2, creatinine: 0.95, egfr: 65, uacr: 45, chol: 210, tg: 165, ua: 6.0 },
+      { date: "2025-12", fastingGlucose: 158, hba1c: 7.9, creatinine: 0.98, egfr: 61, uacr: 52, chol: 205, tg: 158, ua: 6.2 },
+      { date: "2026-03", fastingGlucose: 145, hba1c: 7.6, creatinine: 1.05, egfr: 58, uacr: 68, chol: 198, tg: 150, ua: 6.4 },
+      { date: "2026-06", fastingGlucose: 172, hba1c: 8.3, creatinine: 1.15, egfr: 52, uacr: 110, chol: 215, tg: 180, ua: 6.8 }
     ],
     nutritionHistory: [
       {
@@ -59,10 +65,16 @@ export const mockPatients: Patient[] = [
     weight: 92,
     bmi: 30.0,
     labHistory: [
-      { date: "2025-09", fastingGlucose: 110, hba1c: 6.2, creatinine: 0.85, egfr: 92, uacr: 12, chol: 245, tg: 220 },
-      { date: "2025-12", fastingGlucose: 126, hba1c: 6.5, creatinine: 0.88, egfr: 90, uacr: 15, chol: 238, tg: 210 },
-      { date: "2026-03", fastingGlucose: 142, hba1c: 7.2, creatinine: 0.90, egfr: 88, uacr: 22, chol: 252, tg: 235 },
-      { date: "2026-06", fastingGlucose: 198, hba1c: 8.8, creatinine: 0.94, egfr: 85, uacr: 28, chol: 268, tg: 260 }
+      { date: "2024-03", fastingGlucose: 98, hba1c: 5.6, creatinine: 0.80, egfr: 98, uacr: 8, chol: 205, tg: 150, ua: 6.2 },
+      { date: "2024-06", fastingGlucose: 100, hba1c: 5.7, creatinine: 0.81, egfr: 97, uacr: 9, chol: 210, tg: 160, ua: 6.4 },
+      { date: "2024-09", fastingGlucose: 102, hba1c: 5.8, creatinine: 0.82, egfr: 96, uacr: 9, chol: 218, tg: 170, ua: 6.5 },
+      { date: "2024-12", fastingGlucose: 104, hba1c: 5.9, creatinine: 0.83, egfr: 95, uacr: 10, chol: 225, tg: 185, ua: 6.7 },
+      { date: "2025-03", fastingGlucose: 106, hba1c: 6.0, creatinine: 0.84, egfr: 94, uacr: 11, chol: 232, tg: 200, ua: 6.9 },
+      { date: "2025-06", fastingGlucose: 108, hba1c: 6.1, creatinine: 0.84, egfr: 93, uacr: 11, chol: 240, tg: 210, ua: 7.1 },
+      { date: "2025-09", fastingGlucose: 110, hba1c: 6.2, creatinine: 0.85, egfr: 92, uacr: 12, chol: 245, tg: 220, ua: 7.3 },
+      { date: "2025-12", fastingGlucose: 126, hba1c: 6.5, creatinine: 0.88, egfr: 90, uacr: 15, chol: 238, tg: 210, ua: 7.6 },
+      { date: "2026-03", fastingGlucose: 142, hba1c: 7.2, creatinine: 0.90, egfr: 88, uacr: 22, chol: 252, tg: 235, ua: 7.9 },
+      { date: "2026-06", fastingGlucose: 198, hba1c: 8.8, creatinine: 0.94, egfr: 85, uacr: 28, chol: 268, tg: 260, ua: 8.2 }
     ],
     nutritionHistory: [
       {
@@ -97,10 +109,16 @@ export const mockPatients: Patient[] = [
     weight: 55,
     bmi: 21.0,
     labHistory: [
-      { date: "2025-09", fastingGlucose: 132, hba1c: 7.1, creatinine: 1.45, egfr: 42, uacr: 240, chol: 175, tg: 140 },
-      { date: "2025-12", fastingGlucose: 135, hba1c: 7.2, creatinine: 1.58, egfr: 38, uacr: 290, chol: 180, tg: 145 },
-      { date: "2026-03", fastingGlucose: 125, hba1c: 6.9, creatinine: 1.68, egfr: 35, uacr: 320, chol: 172, tg: 138 },
-      { date: "2026-06", fastingGlucose: 138, hba1c: 7.3, creatinine: 1.85, egfr: 31, uacr: 410, chol: 168, tg: 130 }
+      { date: "2024-03", fastingGlucose: 128, hba1c: 7.0, creatinine: 1.10, egfr: 58, uacr: 120, chol: 180, tg: 135, ua: 5.9 },
+      { date: "2024-06", fastingGlucose: 130, hba1c: 7.0, creatinine: 1.15, egfr: 55, uacr: 140, chol: 178, tg: 138, ua: 6.2 },
+      { date: "2024-09", fastingGlucose: 129, hba1c: 7.1, creatinine: 1.22, egfr: 52, uacr: 165, chol: 177, tg: 140, ua: 6.5 },
+      { date: "2024-12", fastingGlucose: 133, hba1c: 7.2, creatinine: 1.30, egfr: 49, uacr: 190, chol: 176, tg: 140, ua: 6.8 },
+      { date: "2025-03", fastingGlucose: 131, hba1c: 7.1, creatinine: 1.38, egfr: 46, uacr: 215, chol: 176, tg: 142, ua: 7.0 },
+      { date: "2025-06", fastingGlucose: 134, hba1c: 7.1, creatinine: 1.42, egfr: 44, uacr: 230, chol: 175, tg: 140, ua: 7.2 },
+      { date: "2025-09", fastingGlucose: 132, hba1c: 7.1, creatinine: 1.45, egfr: 42, uacr: 240, chol: 175, tg: 140, ua: 7.4 },
+      { date: "2025-12", fastingGlucose: 135, hba1c: 7.2, creatinine: 1.58, egfr: 38, uacr: 290, chol: 180, tg: 145, ua: 7.7 },
+      { date: "2026-03", fastingGlucose: 125, hba1c: 6.9, creatinine: 1.68, egfr: 35, uacr: 320, chol: 172, tg: 138, ua: 8.0 },
+      { date: "2026-06", fastingGlucose: 138, hba1c: 7.3, creatinine: 1.85, egfr: 31, uacr: 410, chol: 168, tg: 130, ua: 8.4 }
     ],
     nutritionHistory: [
       {

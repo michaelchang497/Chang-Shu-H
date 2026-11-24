@@ -7,6 +7,7 @@ export interface LabRecord {
   uacr: number; // ACR(MA/Cr), mg/g, ref <30
   chol: number; // Cholesterol(total), mg/dL, ref <200
   tg: number; // Triglyceride, mg/dL, ref <150
+  ua: number; // Uric acid 尿酸, mg/dL, ref 男 3.5-7.2 / 女 2.6-6.0（示意值，院方檢驗報告尚未提供 UA 區間）
 }
 
 export interface NutritionRecord {

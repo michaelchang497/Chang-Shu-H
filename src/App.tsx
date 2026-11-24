@@ -3,8 +3,8 @@ import logoFull from './assets/logo-full.png';
 import { mockPatients } from './data/patientData';
 import { EDUCATION_TOPICS, EducationTopicId } from './data/educationTopics';
 import { evaluateLab } from './lib/labReference';
-import { recommendTopics } from './lib/recommendTopics';
-import { TREND_METRICS, MonthRange, defaultRange, describeRange, filterByRange, rangeMonths } from './lib/trendMeta';
+import { analyze, AnalysisResult } from './lib/aiAnalysis';
+import { TREND_METRICS, MonthRange, defaultRange, describeRange, filterByRange } from './lib/trendMeta';
 import { EducationRecord, loadRecords, queryRecords, saveRecord } from './lib/educationHistory';
 import { ASSESSMENT_FIELDS, AssessmentFieldId } from './data/assessmentFields';
 import TrendChartCard from './components/TrendChartCard';
@@ -52,7 +52,10 @@ export default function App() {
   const [sessionId, setSessionId] = useState('');
   const [assessments, setAssessments] = useState<Partial<Record<AssessmentFieldId, string>>>({});
   const [nextFocus, setNextFocus] = useState('');
-  const [range, setRange] = useState<MonthRange | null>(null);
+  const [range, setRange] = useState<MonthRange | null>(null); // 已查詢(圖表採用)的區間
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [draft, setDraft] = useState<MonthRange | null>(null); // 輸入框中尚未查詢的區間
   const [allRecords, setAllRecords] = useState<EducationRecord[]>(() => loadRecords());
   const [hq, setHq] = useState({ patientId: '', from: '', to: '' });
   const [hResults, setHResults] = useState<EducationRecord[] | null>(null);
@@ -69,10 +72,11 @@ export default function App() {
     setError('');
     setPatient(found);
     setTab('trend');
-    setRange(defaultRange(found.labHistory.map((r) => r.date)));
-    const current = found.labHistory[found.labHistory.length - 1];
-    const recs = recommendTopics(found, current);
-    setCheckedTopics(new Set(recs.map((r) => r.id)));
+    const dr = defaultRange(found.labHistory.map((r) => r.date));
+    setRange(dr);
+    setDraft(dr);
+    setAnalysis(null);
+    setCheckedTopics(new Set());
     // 換病患時，簽名與回寫狀態一併重置，避免誤帶上一位病患的簽核紀錄
     setEducatorSig(null);
     setPatientSig(null);
@@ -101,22 +105,45 @@ export default function App() {
   }
 
   const current = patient ? patient.labHistory[patient.labHistory.length - 1] : null;
-  const labRows = useMemo(() => (current ? evaluateLab(current) : []), [current]);
-  const recommendations = useMemo(
-    () => (patient && current ? recommendTopics(patient, current) : []),
-    [patient, current]
-  );
+  const labRows = useMemo(() => (current && patient ? evaluateLab(current, patient.gender) : []), [current, patient]);
   const reasonById = useMemo(() => {
     const m = new Map<EducationTopicId, string>();
-    recommendations.forEach((r) => m.set(r.id, r.reason));
+    analysis?.topics.forEach((r) => m.set(r.id, r.reason));
     return m;
-  }, [recommendations]);
+  }, [analysis]);
   const shownHistory = useMemo(
     () => (patient && range ? filterByRange(patient.labHistory, range) : []),
     [patient, range]
   );
-  const rangeInvalid = Boolean(range && range.from && range.to && range.from > range.to);
-  const dateRangeLabel = range && !rangeInvalid ? describeRange(range, shownHistory.length) : '';
+  const dateRangeLabel = range ? describeRange(range, shownHistory.length) : '';
+  // 依「所選區間的檢驗」+「最新一次檢驗」判讀，並預先勾選建議的衛教主題
+  useEffect(() => {
+    if (!patient || !range || !current) return;
+    let stale = false;
+    setAnalyzing(true);
+    analyze({
+      patient: { age: patient.age, gender: patient.gender, diagnosis: patient.diagnosis, bmi: patient.bmi },
+      range,
+      rangeLabs: shownHistory,
+      latest: current,
+    })
+      .then((res) => {
+        if (stale) return;
+        setAnalysis(res);
+        if (!completed) setCheckedTopics(new Set(res.topics.map((x) => x.id)));
+        setRemarksTouched(false);
+      })
+      .finally(() => {
+        if (!stale) setAnalyzing(false);
+      });
+    return () => {
+      stale = true;
+    };
+    // completed 只用來判斷是否覆寫勾選，不需要觸發重新判讀
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient, range]);
+  const draftInvalid = !draft || !draft.from || !draft.to || draft.from > draft.to;
+  const draftDirty = Boolean(draft && range && (draft.from !== range.from || draft.to !== range.to));
 
   function runHistorySearch(next = hq) {
     setHSelected(null);
@@ -456,37 +483,48 @@ export default function App() {
                   <div className="section-header-right-name">{patient.name}</div>
                 </div>
               </div>
-              {range && (
+              {draft && (
                 <div className="range-controls">
                   <label>
                     檢驗區間 起
                     <input
                       type="month"
-                      value={range.from}
-                      onChange={(e) => setRange({ ...range, from: e.target.value })}
+                      value={draft.from}
+                      onChange={(e) => setDraft({ ...draft, from: e.target.value })}
                     />
                   </label>
                   <label>
                     迄
                     <input
                       type="month"
-                      value={range.to}
-                      onChange={(e) => setRange({ ...range, to: e.target.value })}
+                      value={draft.to}
+                      onChange={(e) => setDraft({ ...draft, to: e.target.value })}
                     />
                   </label>
                   <button
+                    className="primary-btn range-query-btn"
+                    disabled={draftInvalid}
+                    onClick={() => draft && setRange(draft)}
+                  >
+                    查詢
+                  </button>
+                  <button
                     className="link-btn"
-                    onClick={() => setRange(defaultRange(patient.labHistory.map((r) => r.date)))}
+                    onClick={() => {
+                      const dr = defaultRange(patient.labHistory.map((r) => r.date));
+                      setDraft(dr);
+                      setRange(dr);
+                    }}
                   >
                     重設為預設（往前 9 個月）
                   </button>
-                  {rangeInvalid && <span className="error">起始月份不可晚於結束月份</span>}
-                  {!rangeInvalid && rangeMonths(range) > 9 && (
-                    <span className="hint">已超過預設的 9 個月</span>
+                  {draft.from && draft.to && draft.from > draft.to && (
+                    <span className="error">起始月份不可晚於結束月份</span>
                   )}
+                  {!draftInvalid && draftDirty && <span className="hint">區間已變更，請按「查詢」更新圖表</span>}
                 </div>
               )}
-              {!rangeInvalid && (
+              {range && (
                 <div className="chart-grid">
                   {TREND_METRICS.map((metric) => (
                     <TrendChartCard key={metric.key} metric={metric} labHistory={shownHistory} />
@@ -529,26 +567,70 @@ export default function App() {
                 </tbody>
               </table>
 
-              <h2 className="topics-heading">今日衛教主題（固定 23 項，與個管系統一致）</h2>
-              <ul className="topic-list">
-                {EDUCATION_TOPICS.map((topic) => {
-                  const checked = checkedTopics.has(topic.id);
-                  const reason = reasonById.get(topic.id);
-                  return (
-                    <li key={topic.id} className={checked ? 'topic-checked' : ''}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleTopic(topic.id)}
-                        />
-                        {topic.label}
-                      </label>
-                      {reason && <div className="topic-reason">建議依據：{reason}</div>}
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="ai-basis">
+                AI 判讀依據：所選區間 {range ? `${range.from} ～ ${range.to}` : '-'}（{shownHistory.length} 筆檢驗）＋ 最新一筆（
+                {current?.date ?? '-'}）
+                <span className="ai-sim">示意：目前由規則模擬模型輸出，僅供個管師參考</span>
+              </div>
+
+              {analyzing && <p className="ai-loading">AI 判讀中…</p>}
+
+              {analysis && !analyzing && (
+                <>
+                  <h2 className="topics-heading">① 衛教主題與摘要</h2>
+                  <div className="ai-summary">{analysis.summary}</div>
+
+                  <h2 className="topics-heading">② 衛教主題勾選（固定 23 項，與個管系統一致）</h2>
+                  <ul className="topic-list">
+                    {EDUCATION_TOPICS.map((topic) => {
+                      const checked = checkedTopics.has(topic.id);
+                      const reason = reasonById.get(topic.id);
+                      return (
+                        <li key={topic.id} className={checked ? 'topic-checked' : ''}>
+                          <label>
+                            <input type="checkbox" checked={checked} onChange={() => toggleTopic(topic.id)} />
+                            {topic.label}
+                          </label>
+                          {reason && <div className="topic-reason">AI 建議原因：{reason}</div>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <h2 className="topics-heading">③ 異常值標示（所選區間內曾出現異常）</h2>
+                  {analysis.abnormalFindings.length === 0 ? (
+                    <p className="placeholder">所選區間內各項檢驗皆在參考區間內。</p>
+                  ) : (
+                    <div className="finding-list">
+                      {analysis.abnormalFindings.map((f) => {
+                        const s = statusLabel(f.latest.status);
+                        return (
+                          <div key={f.key} className="finding-card">
+                            <div className="finding-head">
+                              <span className="finding-name">
+                                {f.labelZh} <span className="en">{f.labelEn}</span>
+                              </span>
+                              <span className="finding-ref">參考 {f.reference} {f.unit}</span>
+                              <span className={`status-pill ${s.cls}`}>目前{s.text}</span>
+                            </div>
+                            <div className="finding-points">
+                              {f.occurrences.map((p) => (
+                                <span key={p.date} className={`finding-point ${p.status}`}>
+                                  {p.date}：{p.value}
+                                </span>
+                              ))}
+                              <span className="finding-count">
+                                共 {f.occurrences.length} / {f.totalCount} 筆異常
+                              </span>
+                            </div>
+                            <div className="finding-note">{f.note}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
