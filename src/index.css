@@ -741,3 +741,30 @@ body { font-family: Inter, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
   .step-no { width: 32px; height: 32px; font-size: 15px; }
   .step:not(:last-child)::after { width: 8px; min-width: 8px; margin: 0 8px; flex: 0 0 8px; }
 }
+
+/* ===== 病患資訊併入懸浮元件；載入病患後內容區滿版 ===== */
+.layout-single { grid-template-columns: 1fr; }
+.layout-banner { grid-column: 1 / -1; margin: 0; }
+.fab-chip { width: 300px; }
+.fab-avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #d1fae5; color: #047857; font-size: 20px; font-weight: 700; }
+.fab-chip-text b { display: flex; align-items: baseline; gap: 8px; font-size: 18px; white-space: nowrap; }
+.fab-chip-text b em { font-style: normal; font-size: 13px; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 1px 8px; border-radius: 6px; }
+.fab-panel { width: 400px; }
+.fab-patient { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+.fab-vitals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px 12px; background: #f8fafc; border-radius: 12px; }
+.fab-vitals span { display: block; font-size: 13px; color: #64748b; }
+.fab-vitals b { font-size: 19px; }
+.fab-dx { margin-top: 10px; font-size: 15px; line-height: 1.6; color: #334155; }
+.fab-dx span { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
+.hist-detail-bar { display: flex; justify-content: flex-end; margin: 16px 0 10px; }
+.hist-detail-bar .big-btn { min-height: 48px; font-size: 16px; padding: 0 20px; }
+
+/* 歷史紀錄查詢：同樣放大成平板規格 */
+.hist-page { font-size: 17px; }
+.hist-filters { font-size: 16px; gap: 14px 18px; }
+.hist-filters label { gap: 10px; }
+.hist-filters input { height: 52px; font-size: 17px; padding: 0 14px; border-radius: 12px; }
+.hist-filters .primary-btn { min-height: 52px; padding: 0 28px; font-size: 17px; border-radius: 12px; }
+.hist-table { font-size: 17px; }
+.hist-table th, .hist-table td { padding: 16px 10px; }
+.hist-table .link-btn { font-size: 17px; min-height: 44px; padding: 10px 8px; }

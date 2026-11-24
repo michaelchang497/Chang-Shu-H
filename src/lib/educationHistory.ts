@@ -11,8 +11,6 @@ export interface RecordSnapshot {
   diagnosis: string;
   labDate: string;
   labs: { labelZh: string; labelEn: string; value: number; unit: string; reference: string; status: 'normal' | 'high' | 'low' }[];
-  summaryPoints: string[];
-  topicReasons: Partial<Record<EducationTopicId, string>>;
 }
 
 export interface EducationRecord {

@@ -11,6 +11,7 @@ import TrendChartCard from './components/TrendChartCard';
 import SignaturePad from './components/SignaturePad';
 import FloatingSearch from './components/FloatingSearch';
 import RecordSheet from './components/RecordSheet';
+import { ensureSnapshot } from './lib/recordSnapshot';
 import { buildAutoRemarks, mergeAuto } from './lib/remarks';
 import { Patient } from './types';
 
@@ -284,8 +285,6 @@ export default function App() {
           reference: r.reference,
           status: r.status,
         })),
-        summaryPoints: analysis?.summaryPoints ?? [],
-        topicReasons: Object.fromEntries(reasonById),
       },
     };
     setSaveWarn(!saveRecord(rec));
@@ -317,12 +316,13 @@ export default function App() {
     setTab('trend');
   }
 
-  const viewerLink = sessionId
-    ? `${window.location.origin}${window.location.pathname}?view-summary=${sessionId}`
-    : '';
-  const qrUrl = viewerLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(viewerLink)}`
-    : '';
+  function shareFor(id: string) {
+    const link = `${window.location.origin}${window.location.pathname}?view-summary=${id}`;
+    return {
+      link,
+      qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`,
+    };
+  }
 
   if (viewSummaryId) {
     const rec = allRecords.find((r) => r.id === viewSummaryId);
@@ -338,7 +338,7 @@ export default function App() {
         </header>
         <main className="viewer-page">
           {rec ? (
-            <RecordSheet record={rec} />
+            <RecordSheet record={ensureSnapshot(rec)} />
           ) : (
             <p className="placeholder">
               找不到這份衛教紀錄。示意版本的紀錄只存在製作它的那台裝置，正式環境會由後端提供可跨裝置開啟的臨時網址。
@@ -474,57 +474,25 @@ export default function App() {
                 )}
   
                 {hSelected && (
-                  <div className="writeback-preview hist-detail">
-                    <div className="completion-title">
-                      {hSelected.patientName}（{hSelected.patientId}）　{hSelected.date} {hSelected.time}
+                  <div className="hist-detail">
+                    <div className="hist-detail-bar">
+                      <button type="button" className="big-btn ghost" onClick={() => setHSelected(null)}>✕ 關閉紀錄單</button>
                     </div>
-                    <div className="writeback-label">衛教項目（{hSelected.topics.length} 項）</div>
-                    <div className="topic-chip-row">
-                      {hSelected.topics.map((id) => (
-                        <span key={id} className="topic-chip">{labelById.get(id) ?? id}</span>
-                      ))}
-                    </div>
-                    <div className="writeback-label">個案認知與遵從度評估</div>
-                    <div className="topic-chip-row">
-                      {ASSESSMENT_FIELDS.filter((f) => hSelected.assessments[f.id]).map((f) => (
-                        <span key={f.id} className="topic-chip assessment-chip">
-                          {f.label}：{hSelected.assessments[f.id]}
-                        </span>
-                      ))}
-                      {ASSESSMENT_FIELDS.every((f) => !hSelected.assessments[f.id]) && (
-                        <span className="placeholder">未評估</span>
-                      )}
-                    </div>
-                    {hSelected.nextFocus && (
-                      <>
-                        <div className="writeback-label">下次需加強的項目</div>
-                        <div className="next-focus-preview">{hSelected.nextFocus}</div>
-                      </>
-                    )}
-                    {hSelected.remarks && (
-                      <>
-                        <div className="writeback-label">備註</div>
-                        <pre className="hist-remarks">{hSelected.remarks}</pre>
-                      </>
-                    )}
-                    <div className="writeback-label">簽名檔</div>
-                    {hSelected.educatorSig && hSelected.patientSig ? (
-                      <div className="signature-row">
-                        <div><img className="hist-sig" src={hSelected.educatorSig} alt="衛教師簽名" /><div className="hint">衛教師</div></div>
-                        <div><img className="hist-sig" src={hSelected.patientSig} alt="患者簽名" /><div className="hint">患者／家屬</div></div>
-                      </div>
-                    ) : (
-                      <p className="hint">衛教師 ✓ ／ 病患或家屬 ✓（示意資料，無簽名圖檔）</p>
-                    )}
+                    <RecordSheet record={ensureSnapshot(hSelected)} share={shareFor(hSelected.id)} />
                   </div>
                 )}
               </div>
           </section>
         </main>
       ) : (
-      <main className="layout">
-        <div className="left-col">
+      <main className={patient ? 'layout layout-single' : 'layout'}>
+        {importedFromHis && patient && (
+          <p className="imported-banner layout-banner">
+            ✓ 已由個管系統帶入病歷號 {patient.id}，檢驗資料已自動查詢完成
+          </p>
+        )}
         {!patient && (
+        <div className="left-col">
         <section className="panel search-panel">
           <h2>病歷號碼檢索系統 (HIS)</h2>
           <div className="search-row">
@@ -545,54 +513,8 @@ export default function App() {
           </p>
           {error && <p className="error">{error}</p>}
         </section>
-        )}
-        {importedFromHis && patient && (
-          <p className="imported-banner">
-            ✓ 已由個管系統帶入病歷號 {patient.id}，檢驗資料已自動查詢完成
-          </p>
-        )}
-        {patient && (
-            <div className="patient-card">
-              <div className="patient-card-bar">
-                <span className="status-dot" />
-                HIS ACTIVE PATIENT
-                <span className="patient-card-bar-right">彰秀醫院病歷庫</span>
-              </div>
-              <div className="patient-card-body">
-                <div className="patient-identity">
-                  <div className="patient-avatar">{patient.name.charAt(0)}</div>
-                  <div>
-                    <div className="patient-name">
-                      {patient.name}
-                      <span className="patient-meta-pill">
-                        {patient.gender === 'M' ? '男' : '女'} · {patient.age} 歲
-                      </span>
-                    </div>
-                    <div className="patient-id">病歷編碼：{patient.id}</div>
-                  </div>
-                </div>
-                <div className="patient-vitals">
-                  <div>
-                    <div className="vital-label">身高</div>
-                    <div className="vital-value">{patient.height} cm</div>
-                  </div>
-                  <div>
-                    <div className="vital-label">體重</div>
-                    <div className="vital-value">{patient.weight} kg</div>
-                  </div>
-                  <div>
-                    <div className="vital-label">BMI</div>
-                    <div className="vital-value">{patient.bmi}</div>
-                  </div>
-                </div>
-                <div className="patient-diagnosis">
-                  <div className="patient-diagnosis-label">個案臨床初診斷</div>
-                  {patient.diagnosis}
-                </div>
-              </div>
-            </div>
-        )}
         </div>
+        )}
 
         <section className="panel content-panel">
           <ol className="stepper" aria-label="衛教流程">
@@ -721,6 +643,37 @@ export default function App() {
 
               {analysis && !aiRunning && (
                 <>
+                <h2 className="topics-heading">臨床檢驗指標（最新一筆：{current?.date ?? '-'}）</h2>
+                <table className="lab-table">
+                  <thead>
+                    <tr>
+                      <th>項目</th>
+                      <th>數值</th>
+                      <th>參考區間</th>
+                      <th>狀態</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {labRows.map((row) => {
+                      const s = statusLabel(row.status);
+                      return (
+                        <tr key={row.key}>
+                          <td>
+                            {row.labelZh} <span className="en">{row.labelEn}</span>
+                          </td>
+                          <td>
+                            {row.value} {row.unit}
+                          </td>
+                          <td>{row.reference}</td>
+                          <td>
+                            <span className={`status-pill ${s.cls}`}>{s.text}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
                   <h2 className="topics-heading">① 衛教主題與摘要</h2>
                   <ul className="ai-points">
                     {analysis.summaryPoints.map((pt) => {
@@ -791,36 +744,6 @@ export default function App() {
                   )}
                 </>
               )}
-              <h2 className="topics-heading">臨床檢驗指標（最新一筆：{current?.date ?? '-'}）</h2>
-              <table className="lab-table">
-                <thead>
-                  <tr>
-                    <th>項目</th>
-                    <th>數值</th>
-                    <th>參考區間</th>
-                    <th>狀態</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {labRows.map((row) => {
-                    const s = statusLabel(row.status);
-                    return (
-                      <tr key={row.key}>
-                        <td>
-                          {row.labelZh} <span className="en">{row.labelEn}</span>
-                        </td>
-                        <td>
-                          {row.value} {row.unit}
-                        </td>
-                        <td>{row.reference}</td>
-                        <td>
-                          <span className={`status-pill ${s.cls}`}>{s.text}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
 
               <div className="step-actions">
                 <button className="big-btn ghost" disabled={aiRunning} onClick={() => setTab('trend')}>← 返回檢驗趨勢</button>
@@ -836,7 +759,7 @@ export default function App() {
             <div className="tab-body">
               <div className="done-banner">✓ 已回寫個管系統，本次衛教紀錄已存檔</div>
               {saveWarn && <p className="error">瀏覽器儲存空間不足，本次紀錄不會出現在「衛教紀錄查詢」。</p>}
-              <RecordSheet record={doneRecord} share={{ link: viewerLink, qrUrl }} />
+              <RecordSheet record={doneRecord} share={shareFor(doneRecord.id)} />
               <div className="step-actions">
                 <span className="step-hint">可請病患掃描 QR 碼，或複製臨時網址傳給病患</span>
                 <button className="big-btn primary" onClick={startNext}>完成，開始下一位病患</button>
@@ -946,8 +869,7 @@ export default function App() {
       )}
       {view === 'care' && patient && (
         <FloatingSearch
-          patientName={patient.name}
-          patientId={patient.id}
+          patient={patient}
           inputValue={patientId}
           onInputChange={(v) => {
             setPatientId(v);

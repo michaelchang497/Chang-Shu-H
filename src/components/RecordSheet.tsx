@@ -3,6 +3,7 @@ import logoFull from '../assets/logo-full.png';
 import { EDUCATION_TOPICS } from '../data/educationTopics';
 import { ASSESSMENT_FIELDS } from '../data/assessmentFields';
 import { EducationRecord } from '../lib/educationHistory';
+import { buildKeyPoints } from '../lib/recordPoints';
 
 export interface ShareInfo {
   link: string;
@@ -54,6 +55,7 @@ export default function RecordSheet({ record, share }: { record: EducationRecord
   const s = record.snapshot;
   const topics = EDUCATION_TOPICS.filter((t) => record.topics.includes(t.id));
   const assessed = ASSESSMENT_FIELDS.filter((f) => record.assessments[f.id]);
+  const points = buildKeyPoints(record);
 
   return (
     <article className="record-sheet">
@@ -115,11 +117,11 @@ export default function RecordSheet({ record, share }: { record: EducationRecord
         </section>
       )}
 
-      {s && s.summaryPoints.length > 0 && (
+      {points.length > 0 && (
         <section className="rs-block">
           <h2>本次衛教重點</h2>
           <ul className="ai-points">
-            {s.summaryPoints.map((pt) => {
+            {points.map((pt) => {
               const i = pt.indexOf('：');
               return (
                 <li key={pt}>
@@ -147,7 +149,6 @@ export default function RecordSheet({ record, share }: { record: EducationRecord
             {topics.map((t) => (
               <li key={t.id}>
                 <b>✓ {t.label}</b>
-                {s?.topicReasons[t.id] && <small>{s.topicReasons[t.id]}</small>}
               </li>
             ))}
           </ul>

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { Patient } from '../types';
 
 interface Props {
-  patientName: string;
-  patientId: string; // 目前載入的病歷號
+  patient: Patient; // 目前載入的病患
   inputValue: string;
   onInputChange: (v: string) => void;
   /** 回傳 true 表示查詢成功（成功後自動收合） */
@@ -11,7 +11,7 @@ interface Props {
 }
 
 const POS_KEY = 'csh-search-fab-pos';
-const CHIP_W = 250;
+const CHIP_W = 300;
 const CHIP_H = 64;
 
 function clamp(p: { x: number; y: number }) {
@@ -32,7 +32,7 @@ function initialPos() {
 }
 
 // 查詢完成後，搜尋改成可拖曳的懸浮元件：點一下展開輸入新的病歷號，拖曳可移動位置。
-export default function FloatingSearch({ patientName, patientId, inputValue, onInputChange, onSearch, error }: Props) {
+export default function FloatingSearch({ patient, inputValue, onInputChange, onSearch, error }: Props) {
   const [pos, setPos] = useState(initialPos);
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -100,10 +100,15 @@ export default function FloatingSearch({ patientName, patientId, inputValue, onI
         aria-expanded={open}
         aria-label="切換病患：點擊展開，拖曳可移動位置"
       >
-        <svg viewBox="0 0 24 24" className="btn-ic"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+        <span className="fab-avatar">{patient.name.charAt(0)}</span>
         <span className="fab-chip-text">
-          <b>{patientName}</b>
-          <small>{patientId}</small>
+          <b>
+            {patient.name}
+            <em>
+              {patient.gender === 'M' ? '男' : '女'} · {patient.age} 歲
+            </em>
+          </b>
+          <small>病歷號 {patient.id}</small>
         </span>
         <svg viewBox="0 0 24 24" className="fab-grip" aria-hidden="true">
           <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
@@ -113,6 +118,17 @@ export default function FloatingSearch({ patientName, patientId, inputValue, onI
       </button>
       {open && (
         <div className={`fab-panel${alignRight ? ' right' : ''}${above ? ' above' : ''}`}>
+          <div className="fab-patient">
+            <div className="fab-vitals">
+              <div><span>身高</span><b>{patient.height} cm</b></div>
+              <div><span>體重</span><b>{patient.weight} kg</b></div>
+              <div><span>BMI</span><b>{patient.bmi}</b></div>
+            </div>
+            <div className="fab-dx">
+              <span>個案臨床初診斷</span>
+              {patient.diagnosis}
+            </div>
+          </div>
           <div className="fab-panel-head">
             <b>查詢其他病患</b>
             <button type="button" className="fab-close" onClick={() => setOpen(false)} aria-label="關閉">✕</button>
