@@ -13,7 +13,10 @@ export default function SignaturePad({ label, onChange }: Props) {
   function getPos(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+      x: ((e.clientX - rect.left) * canvas.width) / rect.width,
+      y: ((e.clientY - rect.top) * canvas.height) / rect.height,
+    };
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -32,7 +35,7 @@ export default function SignaturePad({ label, onChange }: Props) {
     const ctx = canvas.getContext('2d')!;
     const { x, y } = getPos(e);
     ctx.strokeStyle = '#14532d';
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -63,8 +66,8 @@ export default function SignaturePad({ label, onChange }: Props) {
       <div className="signature-canvas-wrap">
         <canvas
           ref={canvasRef}
-          width={340}
-          height={140}
+          width={560}
+          height={220}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

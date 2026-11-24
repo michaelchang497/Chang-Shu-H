@@ -74,7 +74,7 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
           <span className="delta-range">區間內僅 1 筆檢驗，無法計算變化幅度</span>
         )}
       </div>
-      <ResponsiveContainer width="100%" height={170}>
+      <ResponsiveContainer width="100%" height={210}>
         <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
           <defs>
             <linearGradient id={`fill-${metric.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -83,8 +83,8 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
             </linearGradient>
           </defs>
           <CartesianGrid stroke="#eef1f0" vertical={false} />
-          <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-          <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" width={44} />
+          <XAxis dataKey="date" tick={{ fontSize: 13 }} stroke="#9ca3af" />
+          <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" width={50} />
           <Tooltip
             formatter={(value) => [`${value} ${metric.unit}`, metric.labelZh]}
             contentStyle={{ fontSize: 12, borderRadius: 8 }}
@@ -93,7 +93,7 @@ export default function TrendChartCard({ metric, labHistory }: Props) {
             y={metric.referenceValue}
             stroke="#dc7c8b"
             strokeDasharray="4 4"
-            label={{ value: metric.referenceLabel, position: 'insideTopLeft', fontSize: 10, fill: '#b3576a' }}
+            label={{ value: metric.referenceLabel, position: 'insideTopLeft', fontSize: 12, fill: '#b3576a' }}
           />
           <Area
             type="monotone"

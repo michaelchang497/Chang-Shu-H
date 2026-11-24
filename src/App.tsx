@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import logoFull from './assets/logo-full.png';
 import { mockPatients } from './data/patientData';
 import { EDUCATION_TOPICS, EducationTopicId } from './data/educationTopics';
 import { evaluateLab } from './lib/labReference';
-import { analyze, AnalysisResult } from './lib/aiAnalysis';
+import { analyze, AnalysisResult, computeFacts, AnalysisInput } from './lib/aiAnalysis';
 import { TREND_METRICS, MonthRange, defaultRange, describeRange, filterByRange } from './lib/trendMeta';
 import { EducationRecord, loadRecords, queryRecords, saveRecord } from './lib/educationHistory';
 import { ASSESSMENT_FIELDS, AssessmentFieldId } from './data/assessmentFields';
@@ -22,6 +22,24 @@ const SHOW_NUTRITION_DEPT = false;
 
 type Tab = 'trend' | 'education' | 'signoff';
 type View = 'care' | 'history';
+
+// 衛教流程的三個步驟：只顯示進度，不能直接點擊，靠畫面上的按鈕前進／返回
+const FLOW_STEPS: { id: Tab; label: string }[] = [
+  { id: 'trend', label: 'HIS 檢驗與趨勢分析圖' },
+  { id: 'education', label: 'AI 判讀與衛教' },
+  { id: 'signoff', label: '電子流程簽名與發放' },
+];
+
+const AI_STEP_LABELS = [
+  '讀取病患資料',
+  '讀取所選區間的檢驗',
+  '讀取最新一次檢驗',
+  '比對參考區間、找出異常',
+  '挑選建議衛教主題',
+  '整理衛教摘要',
+];
+
+const STATUS_WORD = { high: '偏高', low: '偏低', normal: '正常' } as const;
 
 function buildDefaultRemarks(
   checked: Set<EducationTopicId>,
@@ -54,7 +72,13 @@ export default function App() {
   const [nextFocus, setNextFocus] = useState('');
   const [range, setRange] = useState<MonthRange | null>(null); // 已查詢(圖表採用)的區間
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisKey, setAnalysisKey] = useState('');
+  const [aiRunning, setAiRunning] = useState(false);
+  const [aiIdx, setAiIdx] = useState(0); // 已完成的步驟數
+  const [aiDetails, setAiDetails] = useState<string[]>([]);
+  const [aiError, setAiError] = useState('');
+  const runIdRef = useRef(0);
+  const skipRef = useRef(false);
   const [draft, setDraft] = useState<MonthRange | null>(null); // 輸入框中尚未查詢的區間
   const [allRecords, setAllRecords] = useState<EducationRecord[]>(() => loadRecords());
   const [hq, setHq] = useState({ patientId: '', from: '', to: '' });
@@ -75,7 +99,11 @@ export default function App() {
     const dr = defaultRange(found.labHistory.map((r) => r.date));
     setRange(dr);
     setDraft(dr);
+    runIdRef.current += 1; // 取消進行中的判讀
     setAnalysis(null);
+    setAnalysisKey('');
+    setAiRunning(false);
+    setAiError('');
     setCheckedTopics(new Set());
     // 換病患時，簽名與回寫狀態一併重置，避免誤帶上一位病患的簽核紀錄
     setEducatorSig(null);
@@ -116,34 +144,69 @@ export default function App() {
     [patient, range]
   );
   const dateRangeLabel = range ? describeRange(range, shownHistory.length) : '';
-  // 依「所選區間的檢驗」+「最新一次檢驗」判讀，並預先勾選建議的衛教主題
-  useEffect(() => {
+  const draftInvalid = !draft || !draft.from || !draft.to || draft.from > draft.to;
+  const draftDirty = Boolean(draft && range && (draft.from !== range.from || draft.to !== range.to));
+
+  // 按下「智慧判讀」：依「所選區間的檢驗」＋「最新一次檢驗」判讀，並預先勾選建議的衛教主題。
+  // 同一病患、同一區間已判讀過就直接帶出結果，不重跑。
+  async function startAnalysis() {
     if (!patient || !range || !current) return;
-    let stale = false;
-    setAnalyzing(true);
-    analyze({
+    const key = `${patient.id}|${range.from}|${range.to}`;
+    setTab('education');
+    if (analysis && analysisKey === key) return;
+
+    const runId = ++runIdRef.current;
+    skipRef.current = false;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, skipRef.current ? 0 : ms));
+    const input: AnalysisInput = {
       patient: { age: patient.age, gender: patient.gender, diagnosis: patient.diagnosis, bmi: patient.bmi },
       range,
       rangeLabs: shownHistory,
       latest: current,
-    })
-      .then((res) => {
-        if (stale) return;
-        setAnalysis(res);
-        if (!completed) setCheckedTopics(new Set(res.topics.map((x) => x.id)));
-        setRemarksTouched(false);
-      })
-      .finally(() => {
-        if (!stale) setAnalyzing(false);
-      });
-    return () => {
-      stale = true;
     };
-    // completed 只用來判斷是否覆寫勾選，不需要觸發重新判讀
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patient, range]);
-  const draftInvalid = !draft || !draft.from || !draft.to || draft.from > draft.to;
-  const draftDirty = Boolean(draft && range && (draft.from !== range.from || draft.to !== range.to));
+    const facts = computeFacts(input);
+    const resultP = analyze(input);
+    resultP.catch(() => undefined); // 錯誤在下方統一處理
+
+    const details: string[] = ['', '', '', '', '', ''];
+    const abnormalNames = facts.labs.filter((l) => l.abnormal.length > 0).map((l) => l.labelZh);
+    const g = (k: string) => facts.labs.find((l) => l.key === k)!.latest.value;
+    details[0] = `${patient.age} 歲${patient.gender === 'M' ? '男' : '女'} · BMI ${patient.bmi}`;
+    details[1] = `${range.from} ～ ${range.to}，共 ${facts.rangeCount} 筆`;
+    details[2] = `${facts.latestDate} · HbA1c ${g('hba1c')}% · eGFR ${g('egfr')} · UA ${g('ua')}`;
+    details[3] = abnormalNames.length ? `${abnormalNames.length} 項曾異常：${abnormalNames.join('、')}` : '區間內無異常項目';
+
+    setAnalysis(null);
+    setAiError('');
+    setAiDetails(['', '', '', '', '', '']);
+    setAiIdx(0);
+    setAiRunning(true);
+    try {
+      let res: AnalysisResult | null = null;
+      for (let i = 0; i < AI_STEP_LABELS.length; i++) {
+        await sleep(500 + Math.random() * 350);
+        if (runIdRef.current !== runId) return;
+        if (i >= 4) {
+          res = await resultP;
+          if (runIdRef.current !== runId) return;
+          details[4] = `${res.topics.length} 項建議勾選`;
+          details[5] = `${res.summaryPoints.length} 點重點、${res.abnormalFindings.length} 項異常提醒`;
+        }
+        setAiDetails([...details]);
+        setAiIdx(i + 1);
+      }
+      await sleep(400);
+      if (runIdRef.current !== runId || !res) return;
+      setAnalysis(res);
+      setAnalysisKey(key);
+      if (!completed) setCheckedTopics(new Set(res.topics.map((x) => x.id)));
+      setRemarksTouched(false);
+    } catch (e) {
+      if (runIdRef.current === runId) setAiError(e instanceof Error ? e.message : '判讀失敗，請重試');
+    } finally {
+      if (runIdRef.current === runId) setAiRunning(false);
+    }
+  }
 
   function runHistorySearch(next = hq) {
     setHSelected(null);
@@ -174,6 +237,11 @@ export default function App() {
     if (remarksTouched) return;
     setRemarks(buildDefaultRemarks(checkedTopics, reasonById, labelById));
   }, [checkedTopics, reasonById, labelById, remarksTouched]);
+
+  // 切換流程步驟時回到頁面頂端（平板上才看得到新步驟的開頭）
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [tab]);
 
   const canComplete = Boolean(educatorSig && patientSig);
 
@@ -396,7 +464,7 @@ export default function App() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="輸入病歷號碼"
             />
-            <button onClick={handleSearch}>智慧判讀</button>
+            <button onClick={handleSearch}>查詢病患</button>
           </div>
           {importedFromHis && patient && (
             <p className="imported-banner">
@@ -453,17 +521,17 @@ export default function App() {
         </div>
 
         <section className="panel content-panel">
-          <div className="tabs">
-            <button className={tab === 'trend' ? 'tab active' : 'tab'} onClick={() => setTab('trend')}>
-              <svg viewBox="0 0 24 24" className="tab-ic"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg> HIS 檢驗與趨勢分析圖
-            </button>
-            <button className={tab === 'education' ? 'tab active' : 'tab'} onClick={() => setTab('education')}>
-              <svg viewBox="0 0 24 24" className="tab-ic"><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /><path d="M10 13h4M10 17h4" /></svg> AI 判讀與衛教
-            </button>
-            <button className={tab === 'signoff' ? 'tab active' : 'tab'} onClick={() => setTab('signoff')}>
-              <svg viewBox="0 0 24 24" className="tab-ic"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg> 電子流程簽名與發放
-            </button>
-          </div>
+          <ol className="stepper" aria-label="衛教流程">
+            {FLOW_STEPS.map((s, i) => {
+              const cur = FLOW_STEPS.findIndex((x) => x.id === tab);
+              return (
+                <li key={s.id} className={i === cur ? 'step active' : i < cur ? 'step done' : 'step'}>
+                  <span className="step-no">{i < cur ? '✓' : i + 1}</span>
+                  <span className="step-label">{s.label}</span>
+                </li>
+              );
+            })}
+          </ol>
 
           {!patient && <p className="placeholder">請先於左側查詢病患以載入檢驗指標。</p>}
 
@@ -531,41 +599,19 @@ export default function App() {
                   ))}
                 </div>
               )}
+              <div className="step-actions">
+                <span className="step-hint">
+                  {draftDirty ? '區間已變更，請先按「查詢」更新圖表' : '確認檢驗趨勢後，按「智慧判讀」產生本次衛教建議'}
+                </span>
+                <button className="big-btn primary" disabled={!range || draftInvalid || draftDirty} onClick={startAnalysis}>
+                  <svg viewBox="0 0 24 24" className="btn-ic"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg> 智慧判讀
+                </button>
+              </div>
             </div>
           )}
 
           {patient && tab === 'education' && (
             <div className="tab-body">
-              <h2>臨床檢驗指標（最新一筆：{current?.date ?? '-'}）</h2>
-              <table className="lab-table">
-                <thead>
-                  <tr>
-                    <th>項目</th>
-                    <th>數值</th>
-                    <th>參考區間</th>
-                    <th>狀態</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {labRows.map((row) => {
-                    const s = statusLabel(row.status);
-                    return (
-                      <tr key={row.key}>
-                        <td>
-                          {row.labelZh} <span className="en">{row.labelEn}</span>
-                        </td>
-                        <td>
-                          {row.value} {row.unit}
-                        </td>
-                        <td>{row.reference}</td>
-                        <td>
-                          <span className={`status-pill ${s.cls}`}>{s.text}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
 
               <div className="ai-basis">
                 AI 判讀依據：所選區間 {range ? `${range.from} ～ ${range.to}` : '-'}（{shownHistory.length} 筆檢驗）＋ 最新一筆（
@@ -573,12 +619,52 @@ export default function App() {
                 <span className="ai-sim">示意：目前由規則模擬模型輸出，僅供個管師參考</span>
               </div>
 
-              {analyzing && <p className="ai-loading">AI 判讀中…</p>}
+              {aiRunning && (
+                <div className="aiwork" role="status">
+                  <div className="aw-h">
+                    <span className="aw-orb"><svg viewBox="0 0 24 24" className="btn-ic"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg></span>
+                    <div>
+                      <b>AI 判讀中</b>
+                      <small className="aw-t">依所選區間與最新檢驗，準備本次衛教建議…</small>
+                    </div>
+                    <button className="big-btn ghost aw-skip" onClick={() => (skipRef.current = true)}>略過動畫</button>
+                  </div>
+                  <div className="aw-bar"><i style={{ width: `${(aiIdx / AI_STEP_LABELS.length) * 100}%` }} /></div>
+                  <ol className="aw-steps">
+                    {AI_STEP_LABELS.map((label, i) => (
+                      <li key={label} className={i < aiIdx ? 'ok' : i === aiIdx ? 'run' : ''}>
+                        <span className="aw-s" />
+                        <div>
+                          <b>{label}</b>
+                          {i < aiIdx && aiDetails[i] && <small>{aiDetails[i]}</small>}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {aiError && <p className="error">{aiError}</p>}
 
-              {analysis && !analyzing && (
+              {analysis && !aiRunning && (
                 <>
                   <h2 className="topics-heading">① 衛教主題與摘要</h2>
-                  <div className="ai-summary">{analysis.summary}</div>
+                  <ul className="ai-points">
+                    {analysis.summaryPoints.map((pt) => {
+                      const i = pt.indexOf('：');
+                      return (
+                        <li key={pt}>
+                          {i > 0 ? (
+                            <>
+                              <b>{pt.slice(0, i)}</b>
+                              <span>{pt.slice(i + 1)}</span>
+                            </>
+                          ) : (
+                            <span>{pt}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
 
                   <h2 className="topics-heading">② 衛教主題勾選（固定 23 項，與個管系統一致）</h2>
                   <ul className="topic-list">
@@ -631,6 +717,44 @@ export default function App() {
                   )}
                 </>
               )}
+              <h2 className="topics-heading">臨床檢驗指標（最新一筆：{current?.date ?? '-'}）</h2>
+              <table className="lab-table">
+                <thead>
+                  <tr>
+                    <th>項目</th>
+                    <th>數值</th>
+                    <th>參考區間</th>
+                    <th>狀態</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {labRows.map((row) => {
+                    const s = statusLabel(row.status);
+                    return (
+                      <tr key={row.key}>
+                        <td>
+                          {row.labelZh} <span className="en">{row.labelEn}</span>
+                        </td>
+                        <td>
+                          {row.value} {row.unit}
+                        </td>
+                        <td>{row.reference}</td>
+                        <td>
+                          <span className={`status-pill ${s.cls}`}>{s.text}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              <div className="step-actions">
+                <button className="big-btn ghost" disabled={aiRunning} onClick={() => setTab('trend')}>← 返回檢驗趨勢</button>
+                <span className="step-hint">{analysis && !aiRunning ? `已預先勾選 ${checkedTopics.size} 項衛教主題，可依現場情況調整` : ''}</span>
+                <button className="big-btn primary" disabled={aiRunning || !analysis} onClick={() => setTab('signoff')}>
+                  下一步：簽名與發放 →
+                </button>
+              </div>
             </div>
           )}
 
@@ -752,6 +876,9 @@ export default function App() {
                   </div>
                 </div>
               )}
+              <div className="step-actions">
+                <button className="big-btn ghost" onClick={() => setTab('education')}>← 返回 AI 判讀</button>
+              </div>
             </div>
           )}
         </section>

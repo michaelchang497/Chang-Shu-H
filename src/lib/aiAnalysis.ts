@@ -106,7 +106,8 @@ export interface TopicPick {
 }
 
 export interface ModelOutput {
-  summary: string;
+  /** 條列式衛教摘要；每點格式「標題：內容」，內容簡短 */
+  summaryPoints: string[];
   topics: TopicPick[];
   /** key = 檢驗項目 key，value = 對個管師的說明與提醒 */
   findingNotes: Partial<Record<LabKey, string>>;
@@ -115,7 +116,11 @@ export interface ModelOutput {
 export const MODEL_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
-    summary: { type: 'string', description: '給該病患的衛教概要，繁體中文，150-250 字' },
+    summaryPoints: {
+      type: 'array',
+      description: '給該病患的衛教摘要，條列 4-6 點；每點格式「標題：內容」，內容一句話、不超過 40 字',
+      items: { type: 'string' },
+    },
     topics: {
       type: 'array',
       description: '建議勾選的衛教主題；id 必須是提供清單內的值',
@@ -134,7 +139,7 @@ export const MODEL_OUTPUT_SCHEMA = {
       additionalProperties: { type: 'string' },
     },
   },
-  required: ['summary', 'topics', 'findingNotes'],
+  required: ['summaryPoints', 'topics', 'findingNotes'],
 } as const;
 
 export function buildPrompt(facts: Facts): string {
@@ -145,7 +150,7 @@ export function buildPrompt(facts: Facts): string {
 1. 只能使用下方 facts 內提供的數值與日期，不得自行計算、推測或編造任何檢驗值、日期、藥物或病史。
 2. 衛教主題只能從清單挑選，回傳 id。每個主題以一句話說明理由，並引用 facts 的數值。
 3. facts.labs[].abnormal 不為空的項目，需在 findingNotes 以項目 key 提供「說明與提醒」：說明區間內異常的情形（含目前是否已回到正常），並給個管師提醒。
-4. summary 是對該病患的衛教概要，150-250 字，語氣溫和、避免專業縮寫堆疊。
+4. summaryPoints 是給該病患的衛教摘要，條列 4-6 點，每點「標題：內容」，內容一句話、不超過 40 字，語氣溫和、避免專業縮寫堆疊。
 5. 你的輸出僅供個管師參考，不做診斷或用藥建議。
 
 衛教主題清單：
@@ -289,30 +294,31 @@ function simulateModel(facts: Facts): ModelOutput {
     reason: reasons.get(t.id)!.join('；'),
   }));
 
-  // 摘要
-  const sexText = patient.gender === 'M' ? '男性' : '女性';
+  // 摘要（條列）
+  const sexText = patient.gender === 'M' ? '男' : '女';
+  const shortDx = patient.diagnosis.replace(/\s*\([^)]*\)/g, '');
   const abnormalNow = facts.labs.filter((l) => l.latest.status !== 'normal');
-  const nowText = abnormalNow.length
-    ? `目前異常項目：${abnormalNow
-        .map((l) => `${l.labelZh} ${l.latest.value} ${l.unit}（${STATUS_TEXT[l.latest.status]}）`)
-        .join('、')}。`
-    : '目前各項檢驗皆在參考區間內。';
-  const trendText = [fg, a1c, egfr, uacr]
+  const trendItems = [fg, a1c, egfr, uacr]
     .filter((l) => l.delta && l.delta.diff !== 0)
-    .map((l) => `${l.labelZh}${l.delta!.diff > 0 ? '上升' : '下降'} ${Math.abs(l.delta!.diff)} ${l.unit}`)
-    .join('、');
+    .map((l) => `${l.labelZh} ${l.delta!.diff > 0 ? '↑' : '↓'} ${Math.abs(l.delta!.diff)} ${l.unit}`);
   const focus = topics
     .slice(0, 5)
     .map((t) => EDUCATION_TOPICS.find((x) => x.id === t.id)!.label)
     .join('、');
-  const summary =
-    `本案為 ${patient.age} 歲${sexText}，診斷：${patient.diagnosis}。` +
-    (facts.rangeCount > 0
-      ? `依所選區間 ${facts.range.from} ～ ${facts.range.to}（${facts.rangeCount} 筆檢驗）及最新一筆（${facts.latestDate}）判讀。`
-      : `所選區間內沒有檢驗資料，僅依最新一筆（${facts.latestDate}）判讀。`) +
-    nowText +
-    (trendText ? `區間內${trendText}。` : '') +
-    `建議本次衛教以「${focus}」為重點，並依個管師現場評估增減。`;
+  const onlyBefore = facts.labs.filter((l) => l.abnormal.length > 0 && l.latest.status === 'normal');
+  const summaryPoints: string[] = [
+    `個案：${patient.age} 歲${sexText}性，${shortDx}`,
+    facts.rangeCount > 0
+      ? `判讀依據：${facts.range.from} ～ ${facts.range.to}（${facts.rangeCount} 筆）＋ 最新 ${facts.latestDate}`
+      : `判讀依據：所選區間無檢驗資料，僅用最新 ${facts.latestDate}`,
+    abnormalNow.length
+      ? `目前異常：${abnormalNow.map((l) => `${l.labelZh} ${l.latest.value}（${STATUS_TEXT[l.latest.status]}）`).join('、')}`
+      : '目前異常：各項檢驗皆在參考區間內',
+  ];
+  if (trendItems.length) summaryPoints.push(`區間變化：${trendItems.join('、')}`);
+  if (onlyBefore.length)
+    summaryPoints.push(`曾經異常、目前正常：${onlyBefore.map((l) => l.labelZh).join('、')}（請持續追蹤）`);
+  summaryPoints.push(`本次衛教重點：${focus}`);
 
   const findingNotes: ModelOutput['findingNotes'] = {};
   facts.labs
@@ -323,7 +329,7 @@ function simulateModel(facts: Facts): ModelOutput {
       findingNotes[l.key] = `${describeAbnormal(l)}${rem?.[dir] ? `提醒：${rem[dir]}` : ''}`;
     });
 
-  return { summary, topics, findingNotes };
+  return { summaryPoints, topics, findingNotes };
 }
 
 // ---------- 組裝給畫面用的結果 ----------
@@ -340,7 +346,7 @@ export interface AbnormalFinding {
 }
 
 export interface AnalysisResult {
-  summary: string;
+  summaryPoints: string[];
   topics: TopicPick[];
   abnormalFindings: AbnormalFinding[];
 }
@@ -368,15 +374,12 @@ export function assemble(facts: Facts, out: ModelOutput): AnalysisResult {
         Number(b.latest.status !== 'normal') - Number(a.latest.status !== 'normal') ||
         b.occurrences.length - a.occurrences.length
     );
-  return { summary: out.summary, topics, abnormalFindings };
+  return { summaryPoints: out.summaryPoints, topics, abnormalFindings };
 }
-
-const SIMULATED_LATENCY_MS = 600;
 
 export async function analyze(input: AnalysisInput): Promise<AnalysisResult> {
   const facts = computeFacts(input);
   // TODO 接真實模型：const out = await callModel(buildPrompt(facts), MODEL_OUTPUT_SCHEMA);
-  await new Promise((r) => setTimeout(r, SIMULATED_LATENCY_MS));
   const out = simulateModel(facts);
   return assemble(facts, out);
 }
